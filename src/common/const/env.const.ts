@@ -1,0 +1,15 @@
+export const envVariableKeys = {
+  env: 'ENV',
+  dbType: 'DB_TYPE',
+  dbHost: 'DB_HOST',
+  dbPort: 'DB_PORT',
+  dbUsername: 'DB_USERNAME',
+  dbPassword: 'DB_PASSWORD',
+  dbDatabase: 'DB_DATABASE',
+  googleClientId: 'GOOGLE_CLIENT_ID',
+  googleClientSecret: 'GOOGLE_CLIENT_SECRET',
+  googleCallbackUrl: 'GOOGLE_CALLBACK_URL',
+  accessTokenSecret: 'ACCESS_TOKEN_SECRET',
+  refreshTokenSecret: 'REFRESH_TOKEN_SECRET',
+  frontLoginRedirectUrl: 'FRONT_LOGIN_REDIRECT_URL',
+};
