@@ -7,7 +7,7 @@ export enum BookSortType {
   MOST_CARDS = 'mostCards',
 }
 
-export class FilterBookQueryDto {
+export class GetBookQueryDto {
   @IsOptional()
   @Type(() => Number)
   @IsInt()
