@@ -1,5 +1,13 @@
+import { Book } from 'src/book/entity/book.entity';
 import { BaseTable } from 'src/common/entity/base-table.entity';
-import { Column, Entity, Index, PrimaryGeneratedColumn, Unique } from 'typeorm';
+import {
+  Column,
+  Entity,
+  Index,
+  OneToMany,
+  PrimaryGeneratedColumn,
+  Unique,
+} from 'typeorm';
 
 export enum AuthProvider {
   GOOGLE = 'google',
@@ -23,4 +31,7 @@ export class User extends BaseTable {
   @Column({ length: 100 })
   @Index()
   providerUserId: string;
+
+  @OneToMany(() => Book, (book) => book.user)
+  books: Book[];
 }

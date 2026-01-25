@@ -7,6 +7,10 @@ import { User } from './user/entity/user.entity';
 import { AuthModule } from './auth/auth.module';
 import { APP_GUARD } from '@nestjs/core';
 import { JwtAuthGuard } from './auth/guard/jwt-auth.guard';
+import { BookModule } from './book/book.module';
+import { Book } from './book/entity/book.entity';
+import { Card } from './card/entity/card.entity';
+import { MeModule } from './me/me.module';
 
 @Module({
   imports: [
@@ -38,11 +42,13 @@ import { JwtAuthGuard } from './auth/guard/jwt-auth.guard';
         username: configService.get<string>(envVariableKeys.dbUsername),
         password: configService.get<string>(envVariableKeys.dbPassword),
         database: configService.get<string>(envVariableKeys.dbDatabase),
-        entities: [User],
+        entities: [User, Book, Card],
         synchronize: true,
       }),
     }),
     AuthModule,
+    BookModule,
+    MeModule,
   ],
   controllers: [],
   providers: [

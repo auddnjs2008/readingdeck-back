@@ -12,4 +12,8 @@ export const envVariableKeys = {
   accessTokenSecret: 'ACCESS_TOKEN_SECRET',
   refreshTokenSecret: 'REFRESH_TOKEN_SECRET',
   frontLoginRedirectUrl: 'FRONT_LOGIN_REDIRECT_URL',
+  awsSecretAccessKey: 'AWS_SECRET_ACCESS_KEY',
+  awsAccessKey: 'AKIAY2LKRQET7E4FLDCM',
+  awsRegion: 'AWS_REGION',
+  bucketName: 'BUCKET_NAME',
 };
