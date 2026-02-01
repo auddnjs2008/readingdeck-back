@@ -15,6 +15,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { CreateBookDto } from './dto/create-book.dto';
 import { GetBookQueryDto } from './dto/get-book-query.dto';
 import { GetBookCardsQueryDto } from './dto/get-bookcards-query.dto';
+import { SearchBookQueryDto } from './dto/search-book-query.dto';
 
 @Controller('books')
 export class BookController {
@@ -38,6 +39,11 @@ export class BookController {
   ) {
     const userId = req.user.sub;
     return this.bookService.getBookCards(userId, bookId, query);
+  }
+
+  @Get('search')
+  searchBooks(@Query() query: SearchBookQueryDto) {
+    return this.bookService.searchBooks(query);
   }
 
   @Post()

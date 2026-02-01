@@ -16,4 +16,6 @@ export const envVariableKeys = {
   awsAccessKey: 'AKIAY2LKRQET7E4FLDCM',
   awsRegion: 'AWS_REGION',
   bucketName: 'BUCKET_NAME',
+  kakaoRestApiKey: 'KAKAO_REST_API_KEY',
+  kakaoBookApiUrl: 'KAKAO_BOOK_API_URL',
 };

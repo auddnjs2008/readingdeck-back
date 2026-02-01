@@ -24,7 +24,10 @@ export class AuthController {
 
   @Post('/refresh')
   @Public()
-  async refreshToekn(@Req() req: any, @Res() res: Response) {
+  async refreshToekn(
+    @Req() req: any,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     return this.authService.refreshToken(req, res);
   }
 }

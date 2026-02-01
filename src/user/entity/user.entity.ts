@@ -28,6 +28,9 @@ export class User extends BaseTable {
   @Column({ type: 'enum', enum: AuthProvider })
   provider: AuthProvider;
 
+  @Column({ nullable: true })
+  profile?: string;
+
   @Column({ length: 100 })
   @Index()
   providerUserId: string;

@@ -6,9 +6,10 @@ import { User } from 'src/user/entity/user.entity';
 import { Book } from './entity/book.entity';
 import { S3Service } from 'src/common/service/s3.service';
 import { Card } from 'src/card/entity/card.entity';
+import { KakaoModule } from 'src/integrations/kakao/kakao.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([User, Book, Card])],
+  imports: [TypeOrmModule.forFeature([User, Book, Card]), KakaoModule],
   providers: [BookService, S3Service],
   controllers: [BookController],
 })

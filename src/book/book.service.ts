@@ -10,11 +10,13 @@ import { CreateBookDto } from './dto/create-book.dto';
 import { User } from 'src/user/entity/user.entity';
 import { S3Service } from 'src/common/service/s3.service';
 import { BookSortType, GetBookQueryDto } from './dto/get-book-query.dto';
+import { SearchBookQueryDto } from './dto/search-book-query.dto';
 import {
   CardSortType,
   GetBookCardsQueryDto,
 } from './dto/get-bookcards-query.dto';
 import { Card } from 'src/card/entity/card.entity';
+import { KakaoBookService } from 'src/integrations/kakao/kakao-book.service';
 
 @Injectable()
 export class BookService {
@@ -26,6 +28,7 @@ export class BookService {
     @InjectRepository(Card)
     private readonly cardRepository: Repository<Card>,
     private readonly s3Service: S3Service,
+    private readonly kakaoBookService: KakaoBookService,
   ) {}
 
   async getBooks(query: GetBookQueryDto) {
@@ -154,6 +157,10 @@ export class BookService {
       nextCursor,
       hasNext,
     };
+  }
+
+  async searchBooks(query: SearchBookQueryDto) {
+    return this.kakaoBookService.searchBooks(query);
   }
 
   async createBook(

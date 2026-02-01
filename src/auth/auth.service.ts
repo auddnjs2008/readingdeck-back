@@ -22,7 +22,7 @@ export class AuthService {
     const providerUserId = profile.id;
     const email = profile.emails?.[0]?.value ?? null;
     const name = profile.displayName ?? 'user';
-
+    const profileImage = profile.photos?.[0].value ?? null;
     let user = await this.users.findOne({
       where: { provider, providerUserId },
     });
@@ -33,6 +33,7 @@ export class AuthService {
         email,
         provider,
         providerUserId,
+        profile: profileImage,
       });
       user = await this.users.save(user);
     }
@@ -88,9 +89,25 @@ export class AuthService {
     };
   }
 
+  clearCookies(res: Response) {
+    res.clearCookie('access_token', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'prod',
+      sameSite: process.env.NODE_ENV === 'prod' ? 'lax' : 'none',
+    });
+
+    res.clearCookie('refresh_token', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'prod',
+      sameSite: process.env.NODE_ENV === 'prod' ? 'lax' : 'none',
+    });
+  }
+
   async refreshToken(req: Request, res: Response) {
     const refreshToken = req.cookies?.refresh_token;
+
     if (!refreshToken) {
+      this.clearCookies(res);
       throw new UnauthorizedException('No refresh token');
     }
     try {
@@ -109,14 +126,15 @@ export class AuthService {
       }
 
       const newAccessToken = await this.issueAccessToken(user);
-
       res.cookie('access_token', newAccessToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'prod',
         sameSite: 'lax',
         maxAge: 15 * 60 * 1000,
       });
+      return { ok: true };
     } catch {
+      this.clearCookies(res);
       throw new UnauthorizedException('Invalid refresh token');
     }
   }
