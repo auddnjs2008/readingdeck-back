@@ -20,6 +20,9 @@ export class Book extends BaseTable {
   @Column()
   author: string;
 
+  @Column({ nullable: true })
+  contents: string;
+
   @Column()
   publisher: string;
 

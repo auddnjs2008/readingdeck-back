@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Book } from './entity/book.entity';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { CreateBookDto } from './dto/create-book.dto';
 import { User } from 'src/user/entity/user.entity';
 import { S3Service } from 'src/common/service/s3.service';
@@ -31,53 +31,97 @@ export class BookService {
     private readonly kakaoBookService: KakaoBookService,
   ) {}
 
-  async getBooks(query: GetBookQueryDto) {
+  async getBooks(userId: number, query: GetBookQueryDto) {
     const { page = 1, take = 10, keyword, sort } = query;
     const skip = (page - 1) * take;
 
-    const qb = this.bookRepository.createQueryBuilder('book');
-
-    if (keyword) {
-      qb.andWhere('(book.title ILIKE :keyword OR book.author ILIKE :keyword)', {
-        keyword: `%${keyword}%`,
-      });
-    }
-
-    if (sort) {
-      switch (sort) {
-        case BookSortType.CREATED_AT:
-          qb.orderBy('book.createdAt', 'DESC');
-          break;
-        case BookSortType.RECENT_CARD:
-          qb.leftJoin('book.cards', 'card')
-            .addSelect('MAX(card.createdAt)', 'lastCardAt')
-            .groupBy('book.id')
-            .orderBy('lastCardAt', 'DESC');
-          break;
-        case BookSortType.MOST_CARDS:
-          qb.leftJoin('book.cards', 'card')
-            .addSelect('COUNT(card.id)', 'cardCount')
-            .groupBy('book.id')
-            .orderBy('cardCount', 'DESC');
-          break;
-        default:
-          qb.orderBy('book.createdAt', 'DESC');
-          break;
+    const applyKeyword = (qb) => {
+      if (keyword) {
+        qb.andWhere(
+          '(book.title ILIKE :keyword OR book.author ILIKE :keyword)',
+          { keyword: `%${keyword}%` },
+        );
       }
+    };
+
+    if (sort === BookSortType.RECENT_CARD || sort === BookSortType.MOST_CARDS) {
+      const orderQb = this.bookRepository.createQueryBuilder('book');
+      orderQb.andWhere('book.userId = :userId', { userId });
+      applyKeyword(orderQb);
+
+      if (sort === BookSortType.RECENT_CARD) {
+        orderQb
+          .select('book.id', 'id')
+          .orderBy(
+            '(SELECT MAX(c."createdAt") FROM card c WHERE c."bookId" = book.id)',
+            'DESC',
+          );
+      } else {
+        orderQb
+          .select('book.id', 'id')
+          .orderBy(
+            '(SELECT COUNT(*) FROM card c WHERE c."bookId" = book.id)',
+            'DESC',
+          );
+      }
+
+      const totalRaw = await orderQb
+        .clone()
+        .select('COUNT(DISTINCT book.id)', 'total')
+        .orderBy()
+        .getRawOne();
+
+      const total = Number(totalRaw.total);
+
+      const idRows = await orderQb.clone().skip(skip).take(take).getRawMany();
+      const ids = idRows.map((row) => Number(row.id));
+
+      if (ids.length === 0) {
+        return {
+          items: [],
+          meta: { total, page, take, totalPages: Math.ceil(total / take) },
+        };
+      }
+
+      const books = await this.bookRepository.findBy({ id: In(ids) });
+      const map = new Map(books.map((b) => [b.id, b]));
+      const items = ids
+        .map((id) => map.get(id))
+        .filter((b): b is Book => Boolean(b));
+
+      const countRows = await this.cardRepository
+        .createQueryBuilder('card')
+        .select('card.bookId', 'bookId')
+        .addSelect('COUNT(card.id)', 'count')
+        .where('card.bookId IN (:...ids)', { ids })
+        .groupBy('card.bookId')
+        .getRawMany();
+      const countMap = new Map(
+        countRows.map((r) => [Number(r.bookId), Number(r.count)]),
+      );
+      items.forEach((book) => {
+        (book as Book & { cardCount: number }).cardCount =
+          countMap.get(book.id) ?? 0;
+      });
+
+      return {
+        items,
+        meta: { total, page, take, totalPages: Math.ceil(total / take) },
+      };
     }
 
+    const qb = this.bookRepository
+      .createQueryBuilder('book')
+      .loadRelationCountAndMap('book.cardCount', 'book.cards');
+    qb.andWhere('book.userId = :userId', { userId });
+    applyKeyword(qb);
     qb.orderBy('book.createdAt', 'DESC').skip(skip).take(take);
-
-    const [items, total] = await qb.getManyAndCount();
+    const items = await qb.getMany();
+    const total = await qb.clone().orderBy().getCount();
 
     return {
       items,
-      meta: {
-        total,
-        page,
-        take,
-        totalPages: Math.ceil(total / take),
-      },
+      meta: { total, page, take, totalPages: Math.ceil(total / take) },
     };
   }
 
@@ -172,17 +216,26 @@ export class BookService {
       where: { id: userId },
     });
 
+    let backgroundImage: string | null = null;
     if (!user) {
       throw new NotFoundException('해당 유저가 없습니다');
     }
 
-    const backgroundImage = file
-      ? await this.s3Service.uploadImage(file)
-      : null;
+    if (file) {
+      backgroundImage = await this.s3Service.uploadImage(file);
+    } else if (createBookDto.imageUrl) {
+      backgroundImage = await this.s3Service.uploadImageByUrl(
+        createBookDto.imageUrl,
+      );
+    }
 
     const book = this.bookRepository.create({
-      ...createBookDto,
+      title: createBookDto.title,
+      author: createBookDto.author,
+      publisher: createBookDto.publisher,
+      contents: createBookDto.contents,
       backgroundImage,
+      user,
     });
 
     return this.bookRepository.save(book);

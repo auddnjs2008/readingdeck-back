@@ -7,9 +7,14 @@ import { Book } from './entity/book.entity';
 import { S3Service } from 'src/common/service/s3.service';
 import { Card } from 'src/card/entity/card.entity';
 import { KakaoModule } from 'src/integrations/kakao/kakao.module';
+import { HttpModule } from '@nestjs/axios';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([User, Book, Card]), KakaoModule],
+  imports: [
+    TypeOrmModule.forFeature([User, Book, Card]),
+    KakaoModule,
+    HttpModule,
+  ],
   providers: [BookService, S3Service],
   controllers: [BookController],
 })

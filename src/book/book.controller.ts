@@ -22,8 +22,9 @@ export class BookController {
   constructor(private readonly bookService: BookService) {}
 
   @Get()
-  getBooks(@Query() query: GetBookQueryDto) {
-    return this.bookService.getBooks(query);
+  getBooks(@Req() req: any, @Query() query: GetBookQueryDto) {
+    const userId = req.user.sub;
+    return this.bookService.getBooks(userId, query);
   }
 
   @Get('bookId')

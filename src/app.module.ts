@@ -11,6 +11,7 @@ import { BookModule } from './book/book.module';
 import { Book } from './book/entity/book.entity';
 import { Card } from './card/entity/card.entity';
 import { MeModule } from './me/me.module';
+import { CardModule } from './card/card.module';
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { MeModule } from './me/me.module';
     }),
     AuthModule,
     BookModule,
+    CardModule,
     MeModule,
   ],
   controllers: [],
