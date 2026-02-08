@@ -28,4 +28,10 @@ export class Card extends BaseTable {
 
   @ManyToOne(() => Book, (book) => book.cards)
   book: Book;
+
+  @Column({ nullable: true })
+  pageStart: number;
+
+  @Column({ nullable: true })
+  pageEnd: number;
 }

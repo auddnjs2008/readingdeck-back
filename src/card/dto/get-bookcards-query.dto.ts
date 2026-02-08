@@ -29,6 +29,16 @@ export class GetBookCardsQueryDto {
   hasQuote?: boolean;
 
   @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  pageStart?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  pageEnd?: number;
+
+  @IsOptional()
   @IsEnum(CardSortType)
   sort?: CardSortType;
 }

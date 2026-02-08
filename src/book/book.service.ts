@@ -1,8 +1,4 @@
-import {
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Book } from './entity/book.entity';
 import { In, Repository } from 'typeorm';
@@ -11,10 +7,7 @@ import { User } from 'src/user/entity/user.entity';
 import { S3Service } from 'src/common/service/s3.service';
 import { BookSortType, GetBookQueryDto } from './dto/get-book-query.dto';
 import { SearchBookQueryDto } from './dto/search-book-query.dto';
-import {
-  CardSortType,
-  GetBookCardsQueryDto,
-} from './dto/get-bookcards-query.dto';
+
 import { Card } from 'src/card/entity/card.entity';
 import { KakaoBookService } from 'src/integrations/kakao/kakao-book.service';
 
@@ -133,74 +126,6 @@ export class BookService {
     }
 
     return book;
-  }
-
-  async getBookCards(
-    userId: number,
-    bookId: number,
-    query: GetBookCardsQueryDto,
-  ) {
-    const book = await this.bookRepository.findOne({
-      where: { id: bookId },
-      relations: { user: true },
-    });
-
-    if (!book) {
-      throw new NotFoundException('해당 관련 책을 찾을 수 없습니다.');
-    }
-
-    if (book.user.id !== userId) {
-      throw new ForbiddenException('접근 권한이 없습니다.');
-    }
-
-    const {
-      take = 10,
-      cursor,
-      types,
-      hasQuote,
-      sort = CardSortType.LATEST,
-    } = query;
-
-    const cardQb = this.cardRepository
-      .createQueryBuilder('card')
-      .where('card.bookId = :bookId', { bookId });
-
-    // 타입 필터
-
-    if (types && types.length > 0) {
-      cardQb.andWhere('card.type IN (:...types)', { types });
-    }
-
-    if (hasQuote === true) {
-      cardQb.andWhere('card.quote IS NOT NULL');
-    }
-
-    if (hasQuote === false) {
-      cardQb.andWhere('card.quote IS NULL');
-    }
-
-    if (sort === CardSortType.OLDEST) {
-      cardQb.orderBy('card.id', 'ASC');
-      if (cursor) cardQb.andWhere('card.id > :cursor', { cursor });
-    } else {
-      cardQb.orderBy('card.id', 'DESC');
-      if (cursor) cardQb.andWhere('card.id < :cursor', { cursor });
-    }
-
-    cardQb.take(take + 1);
-
-    const items = await cardQb.getMany();
-
-    const hasNext = items.length > take;
-    const trimmedItems = hasNext ? items.slice(0, take) : items;
-    const nextCursor =
-      trimmedItems.length > 0 ? trimmedItems[trimmedItems.length - 1].id : null;
-
-    return {
-      items: trimmedItems,
-      nextCursor,
-      hasNext,
-    };
   }
 
   async searchBooks(query: SearchBookQueryDto) {

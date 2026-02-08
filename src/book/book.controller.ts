@@ -14,12 +14,17 @@ import { BookService } from './book.service';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { CreateBookDto } from './dto/create-book.dto';
 import { GetBookQueryDto } from './dto/get-book-query.dto';
-import { GetBookCardsQueryDto } from './dto/get-bookcards-query.dto';
+import { GetBookCardsQueryDto } from '../card/dto/get-bookcards-query.dto';
 import { SearchBookQueryDto } from './dto/search-book-query.dto';
+import { CreateCardDto } from 'src/card/dto/create-card.dto';
+import { CardService } from 'src/card/card.service';
 
 @Controller('books')
 export class BookController {
-  constructor(private readonly bookService: BookService) {}
+  constructor(
+    private readonly bookService: BookService,
+    private readonly cardService: CardService,
+  ) {}
 
   @Get()
   getBooks(@Req() req: any, @Query() query: GetBookQueryDto) {
@@ -27,7 +32,12 @@ export class BookController {
     return this.bookService.getBooks(userId, query);
   }
 
-  @Get('bookId')
+  @Get('search')
+  searchBooks(@Query() query: SearchBookQueryDto) {
+    return this.bookService.searchBooks(query);
+  }
+
+  @Get(':bookId')
   getBook(@Param('bookId', ParseIntPipe) bookId: number) {
     return this.bookService.getBook(bookId);
   }
@@ -39,12 +49,7 @@ export class BookController {
     @Query() query: GetBookCardsQueryDto,
   ) {
     const userId = req.user.sub;
-    return this.bookService.getBookCards(userId, bookId, query);
-  }
-
-  @Get('search')
-  searchBooks(@Query() query: SearchBookQueryDto) {
-    return this.bookService.searchBooks(query);
+    return this.cardService.getBookCards(userId, bookId, query);
   }
 
   @Post()
@@ -56,5 +61,15 @@ export class BookController {
   ) {
     const userId = req.user.sub;
     return this.bookService.createBook(createBookDto, userId, file);
+  }
+
+  @Post(':bookId/cards')
+  createCard(
+    @Req() req: any,
+    @Param('bookId', ParseIntPipe) bookId: number,
+    @Body() createCardDto: CreateCardDto,
+  ) {
+    const userId = req.user.sub;
+    return this.cardService.createCard(userId, bookId, createCardDto);
   }
 }

@@ -98,6 +98,60 @@ Get cards for a book (cursor-based).
 
 ---
 
+## POST /books/:bookId/cards
+Create a card for a book.
+
+### Path
+- `bookId` (number, required) — book id
+
+### Request
+`application/json`
+- `type` (enum, required) — `insight` | `change` | `action` | `question`
+- `thought` (string, required)
+- `quote` (string, optional)
+- `pageStart` (number, optional)
+- `pageEnd` (number, optional)
+
+### Request Example
+```json
+{
+  "type": "insight",
+  "thought": "습관은 작은 행동의 반복이다.",
+  "quote": "You do not rise to the level of your goals...",
+  "pageStart": 42,
+  "pageEnd": 43
+}
+```
+
+### Response 201
+```json
+{
+  "id": 1,
+  "type": "insight",
+  "quote": "You do not rise to the level of your goals...",
+  "thought": "습관은 작은 행동의 반복이다.",
+  "backgroundImage": null,
+  "createdAt": "2025-01-23T10:00:00.000Z",
+  "updatedAt": "2025-01-23T10:00:00.000Z",
+  "version": 1,
+  "pageStart": 42,
+  "pageEnd": 43,
+  "book": {
+    "id": 5,
+    "title": "Atomic Habits",
+    "author": "James Clear",
+    "publisher": "..."
+  }
+}
+```
+
+### Errors
+- 401 Unauthorized
+- 403 Forbidden (not owner of the book)
+- 404 Not Found (user or book not found)
+
+---
+
 ## GET /books/search
 Search books via Kakao Book Search API.
 

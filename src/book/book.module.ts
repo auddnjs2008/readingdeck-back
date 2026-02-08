@@ -8,6 +8,7 @@ import { S3Service } from 'src/common/service/s3.service';
 import { Card } from 'src/card/entity/card.entity';
 import { KakaoModule } from 'src/integrations/kakao/kakao.module';
 import { HttpModule } from '@nestjs/axios';
+import { CardService } from 'src/card/card.service';
 
 @Module({
   imports: [
@@ -15,7 +16,7 @@ import { HttpModule } from '@nestjs/axios';
     KakaoModule,
     HttpModule,
   ],
-  providers: [BookService, S3Service],
+  providers: [BookService, S3Service, CardService],
   controllers: [BookController],
 })
 export class BookModule {}
