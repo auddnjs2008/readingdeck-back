@@ -12,6 +12,9 @@ import { Book } from './book/entity/book.entity';
 import { Card } from './card/entity/card.entity';
 import { MeModule } from './me/me.module';
 import { CardModule } from './card/card.module';
+import { Deck } from './deck/entity/deck.entity';
+import { DeckNode } from './deck-node/entity/deck-node.entity';
+import { DeckConnection } from './deck-connection/entity/deck-connection.entity';
 
 @Module({
   imports: [
@@ -43,7 +46,7 @@ import { CardModule } from './card/card.module';
         username: configService.get<string>(envVariableKeys.dbUsername),
         password: configService.get<string>(envVariableKeys.dbPassword),
         database: configService.get<string>(envVariableKeys.dbDatabase),
-        entities: [User, Book, Card],
+        entities: [User, Book, Card, Deck, DeckNode, DeckConnection],
         synchronize: true,
       }),
     }),

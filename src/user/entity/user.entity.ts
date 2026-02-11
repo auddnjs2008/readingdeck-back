@@ -1,5 +1,6 @@
 import { Book } from 'src/book/entity/book.entity';
 import { BaseTable } from 'src/common/entity/base-table.entity';
+import { Deck } from 'src/deck/entity/deck.entity';
 import {
   Column,
   Entity,
@@ -37,4 +38,7 @@ export class User extends BaseTable {
 
   @OneToMany(() => Book, (book) => book.user)
   books: Book[];
+
+  @OneToMany(() => Deck, (deck) => deck.user)
+  decks: Deck[];
 }

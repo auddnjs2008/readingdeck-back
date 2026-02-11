@@ -1,6 +1,13 @@
 import { Book } from 'src/book/entity/book.entity';
 import { BaseTable } from 'src/common/entity/base-table.entity';
-import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import { DeckNode } from 'src/deck-node/entity/deck-node.entity';
+import {
+  Column,
+  Entity,
+  ManyToOne,
+  OneToMany,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 
 export enum CardType {
   INSIGHT = 'insight',
@@ -34,4 +41,7 @@ export class Card extends BaseTable {
 
   @Column({ nullable: true })
   pageEnd: number;
+
+  @OneToMany(() => DeckNode, (deckNode) => deckNode.card)
+  deckNodes: DeckNode[];
 }
