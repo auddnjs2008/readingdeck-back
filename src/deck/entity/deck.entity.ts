@@ -20,13 +20,13 @@ export class Deck extends BaseTable {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ length: 255, default: 'Untited Eck' })
+  @Column({ length: 255, default: 'Untitled Deck' })
   name: string;
 
   @Column()
   userId: number;
 
-  @ManyToOne(() => User, { onDelete: 'CASCADE' })
+  @ManyToOne(() => User, (user) => user.decks, { onDelete: 'CASCADE' })
   user: User;
 
   @Column({ type: 'enum', enum: DeckStatus, default: DeckStatus.DRAFT })

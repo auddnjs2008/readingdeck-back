@@ -26,13 +26,13 @@ export class DeckConnection extends BaseTable {
   @Column()
   fromNodeId: number;
 
-  @ManyToOne(() => DeckNode)
+  @ManyToOne(() => DeckNode, { onDelete: 'CASCADE' })
   fromNode: DeckNode;
 
   @Column()
   toNodeId: number;
 
-  @ManyToOne(() => DeckNode)
+  @ManyToOne(() => DeckNode, { onDelete: 'CASCADE' })
   toNode: DeckNode;
 
   @Column({ length: 50, nullable: true })
