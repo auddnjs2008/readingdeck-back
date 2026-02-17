@@ -15,6 +15,7 @@ import { CardModule } from './card/card.module';
 import { Deck } from './deck/entity/deck.entity';
 import { DeckNode } from './deck-node/entity/deck-node.entity';
 import { DeckConnection } from './deck-connection/entity/deck-connection.entity';
+import { DeckModule } from './deck/deck.module';
 
 @Module({
   imports: [
@@ -54,6 +55,7 @@ import { DeckConnection } from './deck-connection/entity/deck-connection.entity'
     BookModule,
     CardModule,
     MeModule,
+    DeckModule,
   ],
   controllers: [],
   providers: [
