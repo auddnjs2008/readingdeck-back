@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -14,6 +15,7 @@ import {
   CardSortType,
   GetBookCardsQueryDto,
 } from './dto/get-bookcards-query.dto';
+import { UpdateCardDto } from './dto/update-card.dto';
 
 @Injectable()
 export class CardService {
@@ -157,6 +159,62 @@ export class CardService {
       ...createCardDto,
       book: { id: bookId },
     });
+
+    return this.cardRepository.save(card);
+  }
+
+  async updateCard(
+    userId: number,
+    cardId: number,
+    updateCardDto: UpdateCardDto,
+  ) {
+    const card = await this.cardRepository.findOne({
+      where: { id: cardId },
+      relations: { book: { user: true } },
+    });
+
+    if (!card) {
+      throw new NotFoundException('해당 카드를 찾을 수 없습니다.');
+    }
+
+    if (card.book.user.id !== userId) {
+      throw new ForbiddenException('이 카드를 수정할 권한이 없습니다.');
+    }
+
+    const nextPageStart =
+      updateCardDto.pageStart !== undefined
+        ? updateCardDto.pageStart
+        : card.pageStart;
+    const nextPageEnd =
+      updateCardDto.pageEnd !== undefined
+        ? updateCardDto.pageEnd
+        : card.pageEnd;
+
+    if (
+      nextPageStart !== null &&
+      nextPageStart !== undefined &&
+      nextPageEnd !== null &&
+      nextPageEnd !== undefined &&
+      nextPageStart > nextPageEnd
+    ) {
+      throw new BadRequestException('pageStart는 pageEnd보다 클 수 없습니다.');
+    }
+
+    if (updateCardDto.type !== undefined) {
+      card.type = updateCardDto.type;
+    }
+    if (updateCardDto.quote !== undefined) {
+      card.quote = updateCardDto.quote;
+    }
+    if (updateCardDto.thought !== undefined) {
+      card.thought = updateCardDto.thought;
+    }
+    if (updateCardDto.pageStart !== undefined) {
+      card.pageStart = updateCardDto.pageStart;
+    }
+    if (updateCardDto.pageEnd !== undefined) {
+      card.pageEnd = updateCardDto.pageEnd;
+    }
 
     return this.cardRepository.save(card);
   }
