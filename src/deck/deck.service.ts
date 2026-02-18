@@ -13,6 +13,7 @@ import { User } from 'src/user/entity/user.entity';
 import { DataSource, In, Repository } from 'typeorm';
 import { CreateDeckDto } from './dto/create-deck.dto';
 import { PublishDeckDto } from './dto/publish-deck.dto';
+import { UpdateDeckDto } from './dto/update-deck.dto';
 import { UpdateDeckGraphDto } from './dto/update-deck-graph.dto';
 import { Deck, DeckStatus } from './entity/deck.entity';
 
@@ -110,6 +111,23 @@ export class DeckService {
       ...deck,
       nodes,
       connections,
+    };
+  }
+
+  async updateDeck(userId: number, deckId: number, dto: UpdateDeckDto) {
+    const deck = await this.findOwnedDeck(userId, deckId);
+
+    if (dto.name?.trim()) {
+      deck.name = dto.name.trim();
+    }
+
+    const savedDeck = await this.deckRepository.save(deck);
+
+    return {
+      id: savedDeck.id,
+      name: savedDeck.name,
+      status: savedDeck.status,
+      updatedAt: savedDeck.updatedAt,
     };
   }
 

@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Patch,
   Param,
   ParseIntPipe,
   Post,
@@ -10,6 +11,7 @@ import {
 } from '@nestjs/common';
 import { CreateDeckDto } from './dto/create-deck.dto';
 import { PublishDeckDto } from './dto/publish-deck.dto';
+import { UpdateDeckDto } from './dto/update-deck.dto';
 import { UpdateDeckGraphDto } from './dto/update-deck-graph.dto';
 import { DeckService } from './deck.service';
 
@@ -27,6 +29,16 @@ export class DeckController {
   getDeck(@Req() req: any, @Param('deckId', ParseIntPipe) deckId: number) {
     const userId = req.user.sub;
     return this.deckService.getDeck(userId, deckId);
+  }
+
+  @Patch(':deckId')
+  updateDeck(
+    @Req() req: any,
+    @Param('deckId', ParseIntPipe) deckId: number,
+    @Body() updateDeckDto: UpdateDeckDto,
+  ) {
+    const userId = req.user.sub;
+    return this.deckService.updateDeck(userId, deckId, updateDeckDto);
   }
 
   @Put(':deckId/graph')
