@@ -366,10 +366,15 @@ export class DeckService {
     const spanX = Math.max(bounds.maxX - bounds.minX, 1);
     const spanY = Math.max(bounds.maxY - bounds.minY, 1);
 
+    const previewPadding = 0.06;
     const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
     const round3 = (v: number) => Math.round(v * 1000) / 1000;
-    const nx = (x: number) => round3(clamp01((x - bounds.minX) / spanX));
-    const ny = (y: number) => round3(clamp01((y - bounds.minY) / spanY));
+    const applyPadding = (v: number) =>
+      previewPadding + v * (1 - previewPadding * 2);
+    const nx = (x: number) =>
+      round3(applyPadding(clamp01((x - bounds.minX) / spanX)));
+    const ny = (y: number) =>
+      round3(applyPadding(clamp01((y - bounds.minY) / spanY)));
 
     const nodeById = new Map(nodes.map((n) => [n.id, n]));
 
