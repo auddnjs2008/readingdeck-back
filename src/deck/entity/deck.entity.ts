@@ -15,6 +15,20 @@ export enum DeckStatus {
   PUBLISHED = 'published',
 }
 
+export type DeckPreview = {
+  version: 1;
+  bounds: {
+    minX: number;
+    minY: number;
+    maxX: number;
+    maxY: number;
+  };
+  nodeCount: number;
+  connectionCount: number;
+  nodes: Array<{ x: number; y: number; t: 'book' | 'card' }>;
+  edges: Array<{ sx: number; sy: number; tx: number; ty: number }>;
+};
+
 @Entity()
 export class Deck extends BaseTable {
   @PrimaryGeneratedColumn()
@@ -31,6 +45,12 @@ export class Deck extends BaseTable {
 
   @Column({ type: 'enum', enum: DeckStatus, default: DeckStatus.DRAFT })
   status: DeckStatus;
+
+  @Column({ type: 'jsonb', nullable: true })
+  preview: DeckPreview | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  previewUpdatedAt: Date | null;
 
   @OneToMany(() => DeckNode, (node) => node.deck)
   nodes: DeckNode[];

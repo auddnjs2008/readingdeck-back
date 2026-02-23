@@ -8,16 +8,28 @@ import {
   Post,
   Put,
   Req,
+  Query,
 } from '@nestjs/common';
 import { CreateDeckDto } from './dto/create-deck.dto';
 import { PublishDeckDto } from './dto/publish-deck.dto';
 import { UpdateDeckDto } from './dto/update-deck.dto';
 import { UpdateDeckGraphDto } from './dto/update-deck-graph.dto';
 import { DeckService } from './deck.service';
+import { GetDecksQueryDto } from './dto/get-decks-query.dto';
+import { GetDecksResponseDto } from './dto/get-decks-response.dto';
 
 @Controller('decks')
 export class DeckController {
   constructor(private readonly deckService: DeckService) {}
+
+  @Get('')
+  getDecks(
+    @Req() req: any,
+    @Query() getDecksQueryDto: GetDecksQueryDto,
+  ): Promise<GetDecksResponseDto> {
+    const userId = req.user.sub;
+    return this.deckService.getDecks(userId, getDecksQueryDto);
+  }
 
   @Post()
   createDeck(@Req() req: any, @Body() createDeckDto: CreateDeckDto) {

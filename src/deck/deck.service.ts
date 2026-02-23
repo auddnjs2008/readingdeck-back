@@ -12,10 +12,24 @@ import { DeckNode, DeckNodeType } from 'src/deck-node/entity/deck-node.entity';
 import { User } from 'src/user/entity/user.entity';
 import { DataSource, In, Repository } from 'typeorm';
 import { CreateDeckDto } from './dto/create-deck.dto';
+import { GetDecksQueryDto } from './dto/get-decks-query.dto';
+import { GetDecksResponseDto } from './dto/get-decks-response.dto';
 import { PublishDeckDto } from './dto/publish-deck.dto';
 import { UpdateDeckDto } from './dto/update-deck.dto';
 import { UpdateDeckGraphDto } from './dto/update-deck-graph.dto';
 import { Deck, DeckStatus } from './entity/deck.entity';
+
+type DeckListRawRow = {
+  id: number;
+  name: string;
+  status: DeckStatus;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+  preview: Deck['preview'];
+  previewUpdatedAt: Date | string | null;
+  nodeCount: string | number;
+  connectionCount: string | number;
+};
 
 @Injectable()
 export class DeckService {
@@ -34,6 +48,98 @@ export class DeckService {
     private readonly cardRepository: Repository<Card>,
     private readonly dataSource: DataSource,
   ) {}
+
+  async getDecks(
+    userId: number,
+    dto: GetDecksQueryDto,
+  ): Promise<GetDecksResponseDto> {
+    await this.ensureUserExists(userId);
+
+    const take = Math.min(dto.take ?? 12, 50);
+    const offset = dto.cursor ?? 0;
+    const sortType: 'ASC' | 'DESC' = dto.sort === 'oldest' ? 'ASC' : 'DESC';
+
+    const qb = this.deckRepository
+      .createQueryBuilder('deck')
+      .where('deck.userId = :userId', { userId });
+
+    if (dto.status) {
+      qb.andWhere('deck.status = :status', { status: dto.status });
+    }
+
+    if (dto.keyword?.trim()) {
+      qb.andWhere('deck.name ILIKE :keyword', {
+        keyword: `%${dto.keyword.trim()}%`,
+      });
+    }
+
+    const total = await qb.clone().getCount();
+
+    const rows = await qb
+      .select('deck.id', 'id')
+      .addSelect('deck.name', 'name')
+      .addSelect('deck.status', 'status')
+      .addSelect('deck.createdAt', 'createdAt')
+      .addSelect('deck.updatedAt', 'updatedAt')
+      .addSelect('deck.preview', 'preview')
+      .addSelect('deck.previewUpdatedAt', 'previewUpdatedAt')
+      .addSelect(
+        (subQuery) =>
+          subQuery
+            .select('COUNT(1)')
+            .from(DeckNode, 'node')
+            .where('node.deckId = deck.id'),
+        'nodeCount',
+      )
+      .addSelect(
+        (subQuery) =>
+          subQuery
+            .select('COUNT(1)')
+            .from(DeckConnection, 'conn')
+            .where('conn.deckId = deck.id'),
+        'connectionCount',
+      )
+      .orderBy('deck.updatedAt', sortType)
+      .addOrderBy('deck.id', sortType)
+      .take(take)
+      .skip(offset)
+      .getRawMany<DeckListRawRow>();
+
+    const mappedItems = rows.map((row) => {
+      const createdAt =
+        row.createdAt instanceof Date ? row.createdAt : new Date(row.createdAt);
+      const updatedAt =
+        row.updatedAt instanceof Date ? row.updatedAt : new Date(row.updatedAt);
+      const previewUpdatedAt =
+        row.previewUpdatedAt == null
+          ? null
+          : row.previewUpdatedAt instanceof Date
+            ? row.previewUpdatedAt
+            : new Date(row.previewUpdatedAt);
+
+      return {
+        id: Number(row.id),
+        name: row.name,
+        status: row.status,
+        createdAt,
+        updatedAt,
+        preview: row.preview ?? null,
+        previewUpdatedAt,
+        nodeCount: Number(row.nodeCount ?? 0),
+        connectionCount: Number(row.connectionCount ?? 0),
+      };
+    });
+
+    return {
+      items: mappedItems,
+      meta: {
+        total,
+        take,
+        cursor: offset,
+        nextCursor: offset + rows.length < total ? offset + rows.length : null,
+      },
+    };
+  }
 
   async createDeck(userId: number, dto: CreateDeckDto) {
     await this.ensureUserExists(userId);
@@ -85,8 +191,15 @@ export class DeckService {
         nodeIdByClientKey,
       );
 
-      return {
+      const preview = this.buildDeckPreview(createdNodes, createdConnections);
+      const savedDeck = await deckRepo.save({
         ...deck,
+        preview,
+        previewUpdatedAt: new Date(),
+      });
+
+      return {
+        ...savedDeck,
         nodes: createdNodes,
         connections: createdConnections,
       };
@@ -180,8 +293,11 @@ export class DeckService {
         nodeIdByClientKey,
       );
 
+      const preview = this.buildDeckPreview(savedNodes, savedConnections);
       const updatedDeck = await deckRepo.save({
         ...deck,
+        preview,
+        previewUpdatedAt: new Date(),
         updatedAt: new Date(),
       });
 
@@ -217,6 +333,82 @@ export class DeckService {
       name: savedDeck.name,
       status: savedDeck.status,
       updatedAt: savedDeck.updatedAt,
+    };
+  }
+
+  private buildDeckPreview(nodes: DeckNode[], edges: DeckConnection[]) {
+    if (nodes.length === 0) {
+      return {
+        version: 1 as const,
+        bounds: { minX: 0, minY: 0, maxX: 1, maxY: 1 },
+        nodeCount: 0,
+        connectionCount: 0,
+        nodes: [],
+        edges: [],
+      };
+    }
+
+    const bounds = nodes.reduce(
+      (prev, cur) => ({
+        minX: Math.min(prev.minX, cur.positionX),
+        minY: Math.min(prev.minY, cur.positionY),
+        maxX: Math.max(prev.maxX, cur.positionX),
+        maxY: Math.max(prev.maxY, cur.positionY),
+      }),
+      {
+        minX: Number.POSITIVE_INFINITY,
+        minY: Number.POSITIVE_INFINITY,
+        maxX: Number.NEGATIVE_INFINITY,
+        maxY: Number.NEGATIVE_INFINITY,
+      },
+    );
+
+    const spanX = Math.max(bounds.maxX - bounds.minX, 1);
+    const spanY = Math.max(bounds.maxY - bounds.minY, 1);
+
+    const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
+    const round3 = (v: number) => Math.round(v * 1000) / 1000;
+    const nx = (x: number) => round3(clamp01((x - bounds.minX) / spanX));
+    const ny = (y: number) => round3(clamp01((y - bounds.minY) / spanY));
+
+    const nodeById = new Map(nodes.map((n) => [n.id, n]));
+
+    const previewNodes = [...nodes]
+      .sort((a, b) => b.id - a.id)
+      .slice(0, 40)
+      .map((item) => ({
+        x: nx(item.positionX),
+        y: ny(item.positionY),
+        t: item.type, // "book" | "card"
+      }));
+
+    const previewEdges = [...edges]
+      .sort((a, b) => b.id - a.id)
+      .slice(0, 60)
+      .map((item) => {
+        const from = nodeById.get(item.fromNodeId);
+        const to = nodeById.get(item.toNodeId);
+        if (!from || !to) return null;
+
+        return {
+          sx: nx(from.positionX),
+          sy: ny(from.positionY),
+          tx: nx(to.positionX),
+          ty: ny(to.positionY),
+        };
+      })
+      .filter(
+        (v): v is { sx: number; sy: number; tx: number; ty: number } =>
+          v !== null,
+      );
+
+    return {
+      version: 1 as const,
+      bounds,
+      nodeCount: nodes.length,
+      connectionCount: edges.length,
+      nodes: previewNodes,
+      edges: previewEdges,
     };
   }
 
