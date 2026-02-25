@@ -210,10 +210,46 @@ export class DeckService {
     const deck = await this.findOwnedDeck(userId, deckId);
 
     const [nodes, connections] = await Promise.all([
-      this.deckNodeRepository.find({
-        where: { deckId },
-        order: { order: 'ASC', id: 'ASC' },
-      }),
+      this.deckNodeRepository
+        .createQueryBuilder('node')
+        .leftJoinAndSelect('node.book', 'book')
+        .leftJoinAndSelect('node.card', 'card')
+        .where('node.deckId = :deckId', { deckId })
+        .orderBy('node.order', 'ASC')
+        .addOrderBy('node.id', 'ASC')
+        .select([
+          'node.id',
+          'node.deckId',
+          'node.type',
+          'node.clientKey',
+          'node.bookId',
+          'node.cardId',
+          'node.positionX',
+          'node.positionY',
+          'node.order',
+          'node.createdAt',
+          'node.updatedAt',
+          'node.version',
+          'book.id',
+          'book.title',
+          'book.author',
+          'book.publisher',
+          'book.backgroundImage',
+          'book.createdAt',
+          'book.updatedAt',
+          'book.version',
+          'card.id',
+          'card.type',
+          'card.quote',
+          'card.thought',
+          'card.backgroundImage',
+          'card.pageStart',
+          'card.pageEnd',
+          'card.createdAt',
+          'card.updatedAt',
+          'card.version',
+        ])
+        .getMany(),
       this.deckConnectionRepository.find({
         where: { deckId },
         order: { id: 'ASC' },
