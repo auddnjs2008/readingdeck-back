@@ -372,6 +372,12 @@ export class DeckService {
     };
   }
 
+  async deleteDeck(userId: number, deckId: number) {
+    const deck = await this.findOwnedDeck(userId, deckId);
+
+    await this.deckRepository.delete({ id: deck.id });
+  }
+
   private buildDeckPreview(nodes: DeckNode[], edges: DeckConnection[]) {
     if (nodes.length === 0) {
       return {

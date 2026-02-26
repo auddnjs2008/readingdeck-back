@@ -9,6 +9,9 @@ import {
   Put,
   Req,
   Query,
+  Delete,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import { CreateDeckDto } from './dto/create-deck.dto';
 import { PublishDeckDto } from './dto/publish-deck.dto';
@@ -71,5 +74,12 @@ export class DeckController {
   ) {
     const userId = req.user.sub;
     return this.deckService.publishDeck(userId, deckId, publishDeckDto);
+  }
+
+  @Delete(':deckId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  deleteDeck(@Req() req: any, @Param('deckId', ParseIntPipe) deckId: number) {
+    const userId = req.user.sub;
+    return this.deckService.deleteDeck(userId, deckId);
   }
 }
