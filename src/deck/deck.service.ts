@@ -214,6 +214,7 @@ export class DeckService {
         .createQueryBuilder('node')
         .leftJoinAndSelect('node.book', 'book')
         .leftJoinAndSelect('node.card', 'card')
+        .leftJoinAndSelect('card.book', 'cardBook')
         .where('node.deckId = :deckId', { deckId })
         .orderBy('node.order', 'ASC')
         .addOrderBy('node.id', 'ASC')
@@ -248,6 +249,14 @@ export class DeckService {
           'card.createdAt',
           'card.updatedAt',
           'card.version',
+          'cardBook.id',
+          'cardBook.title',
+          'cardBook.author',
+          'cardBook.publisher',
+          'cardBook.backgroundImage',
+          'cardBook.createdAt',
+          'cardBook.updatedAt',
+          'cardBook.version',
         ])
         .getMany(),
       this.deckConnectionRepository.find({
@@ -256,9 +265,45 @@ export class DeckService {
       }),
     ]);
 
+    const normalizedNodes = nodes.map((node) => {
+      const relatedBook = node.book ?? node.card?.book ?? null;
+      const resolvedBookId = node.bookId ?? relatedBook?.id ?? null;
+
+      return {
+        ...node,
+        bookId: resolvedBookId,
+        book: relatedBook
+          ? {
+              id: relatedBook.id,
+              title: relatedBook.title,
+              author: relatedBook.author,
+              publisher: relatedBook.publisher,
+              backgroundImage: relatedBook.backgroundImage ?? null,
+              createdAt: relatedBook.createdAt,
+              updatedAt: relatedBook.updatedAt,
+              version: relatedBook.version,
+            }
+          : null,
+        card: node.card
+          ? {
+              id: node.card.id,
+              type: node.card.type,
+              quote: node.card.quote ?? null,
+              thought: node.card.thought,
+              backgroundImage: node.card.backgroundImage ?? null,
+              pageStart: node.card.pageStart ?? null,
+              pageEnd: node.card.pageEnd ?? null,
+              createdAt: node.card.createdAt,
+              updatedAt: node.card.updatedAt,
+              version: node.card.version,
+            }
+          : null,
+      };
+    });
+
     return {
       ...deck,
-      nodes,
+      nodes: normalizedNodes,
       connections,
     };
   }
