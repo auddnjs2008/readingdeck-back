@@ -6,7 +6,7 @@ import {
   Length,
   ValidateNested,
 } from 'class-validator';
-import { DeckStatus } from 'src/deck/entity/deck.entity';
+import { DeckMode, DeckStatus } from 'src/deck/entity/deck.entity';
 import { DeckGraphConnectionDto } from './deck-graph-connection.dto';
 import { DeckGraphNodeDto } from './deck-graph-node.dto';
 
@@ -19,6 +19,10 @@ export class CreateDeckDto {
   @IsOptional()
   @IsEnum(DeckStatus)
   status?: DeckStatus;
+
+  @IsOptional()
+  @IsEnum(DeckMode)
+  mode?: DeckMode;
 
   @IsOptional()
   @ValidateNested({ each: true })

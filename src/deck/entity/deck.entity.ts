@@ -15,8 +15,14 @@ export enum DeckStatus {
   PUBLISHED = 'published',
 }
 
-export type DeckPreview = {
+export enum DeckMode {
+  LIST = 'list',
+  GRAPH = 'graph',
+}
+
+export type DeckGraphPreview = {
   version: 1;
+  kind: 'graph';
   bounds: {
     minX: number;
     minY: number;
@@ -28,6 +34,20 @@ export type DeckPreview = {
   nodes: Array<{ x: number; y: number; t: 'book' | 'card' }>;
   edges: Array<{ sx: number; sy: number; tx: number; ty: number }>;
 };
+
+export type DeckListPreview = {
+  version: 1;
+  kind: 'list';
+  itemCount: number;
+  items: Array<{
+    t: 'insight' | 'change' | 'action' | 'question';
+    title: string;
+    cover: string | null;
+    book: string | null;
+  }>;
+};
+
+export type DeckPreview = DeckGraphPreview | DeckListPreview;
 
 @Entity()
 export class Deck extends BaseTable {
@@ -45,6 +65,9 @@ export class Deck extends BaseTable {
 
   @Column({ type: 'enum', enum: DeckStatus, default: DeckStatus.DRAFT })
   status: DeckStatus;
+
+  @Column({ type: 'enum', enum: DeckMode, default: DeckMode.GRAPH })
+  mode: DeckMode;
 
   @Column({ type: 'jsonb', nullable: true })
   preview: DeckPreview | null;

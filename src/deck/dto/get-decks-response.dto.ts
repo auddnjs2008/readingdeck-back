@@ -1,9 +1,10 @@
-import { DeckPreview, DeckStatus } from '../entity/deck.entity';
+import { DeckMode, DeckPreview, DeckStatus } from '../entity/deck.entity';
 
 export class DeckListItemResponseDto {
   id: number;
   name: string;
   status: DeckStatus;
+  mode: DeckMode;
   createdAt: Date;
   updatedAt: Date;
   preview: DeckPreview | null;

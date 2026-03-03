@@ -17,12 +17,13 @@ import { GetDecksResponseDto } from './dto/get-decks-response.dto';
 import { PublishDeckDto } from './dto/publish-deck.dto';
 import { UpdateDeckDto } from './dto/update-deck.dto';
 import { UpdateDeckGraphDto } from './dto/update-deck-graph.dto';
-import { Deck, DeckStatus } from './entity/deck.entity';
+import { Deck, DeckMode, DeckStatus } from './entity/deck.entity';
 
 type DeckListRawRow = {
   id: number;
   name: string;
   status: DeckStatus;
+  mode: DeckMode;
   createdAt: Date | string;
   updatedAt: Date | string;
   preview: Deck['preview'];
@@ -79,6 +80,7 @@ export class DeckService {
       .select('deck.id', 'id')
       .addSelect('deck.name', 'name')
       .addSelect('deck.status', 'status')
+      .addSelect('deck.mode', 'mode')
       .addSelect('deck.createdAt', 'createdAt')
       .addSelect('deck.updatedAt', 'updatedAt')
       .addSelect('deck.preview', 'preview')
@@ -121,6 +123,7 @@ export class DeckService {
         id: Number(row.id),
         name: row.name,
         status: row.status,
+        mode: row.mode,
         createdAt,
         updatedAt,
         preview: row.preview ?? null,
@@ -156,6 +159,7 @@ export class DeckService {
         deckRepo.create({
           name: dto.name?.trim() || 'Untitled Deck',
           status: dto.status ?? DeckStatus.DRAFT,
+          mode: dto.mode ?? DeckMode.GRAPH,
           userId,
         }),
       );
@@ -191,7 +195,11 @@ export class DeckService {
         nodeIdByClientKey,
       );
 
-      const preview = this.buildDeckPreview(createdNodes, createdConnections);
+      const preview = await this.buildDeckPreview(
+        deck.mode,
+        createdNodes,
+        createdConnections,
+      );
       const savedDeck = await deckRepo.save({
         ...deck,
         preview,
@@ -314,6 +322,9 @@ export class DeckService {
     if (dto.name?.trim()) {
       deck.name = dto.name.trim();
     }
+    if (dto.mode) {
+      deck.mode = dto.mode;
+    }
 
     const savedDeck = await this.deckRepository.save(deck);
 
@@ -321,6 +332,7 @@ export class DeckService {
       id: savedDeck.id,
       name: savedDeck.name,
       status: savedDeck.status,
+      mode: savedDeck.mode,
       updatedAt: savedDeck.updatedAt,
     };
   }
@@ -374,7 +386,11 @@ export class DeckService {
         nodeIdByClientKey,
       );
 
-      const preview = this.buildDeckPreview(savedNodes, savedConnections);
+      const preview = await this.buildDeckPreview(
+        deck.mode,
+        savedNodes,
+        savedConnections,
+      );
       const updatedDeck = await deckRepo.save({
         ...deck,
         preview,
@@ -413,6 +429,7 @@ export class DeckService {
       id: savedDeck.id,
       name: savedDeck.name,
       status: savedDeck.status,
+      mode: savedDeck.mode,
       updatedAt: savedDeck.updatedAt,
     };
   }
@@ -423,10 +440,23 @@ export class DeckService {
     await this.deckRepository.delete({ id: deck.id });
   }
 
-  private buildDeckPreview(nodes: DeckNode[], edges: DeckConnection[]) {
+  private async buildDeckPreview(
+    mode: DeckMode,
+    nodes: DeckNode[],
+    edges: DeckConnection[],
+  ) {
+    if (mode === DeckMode.LIST) {
+      return this.buildDeckListPreview(nodes);
+    }
+
+    return this.buildDeckGraphPreview(nodes, edges);
+  }
+
+  private buildDeckGraphPreview(nodes: DeckNode[], edges: DeckConnection[]) {
     if (nodes.length === 0) {
       return {
         version: 1 as const,
+        kind: 'graph' as const,
         bounds: { minX: 0, minY: 0, maxX: 1, maxY: 1 },
         nodeCount: 0,
         connectionCount: 0,
@@ -496,11 +526,85 @@ export class DeckService {
 
     return {
       version: 1 as const,
+      kind: 'graph' as const,
       bounds,
       nodeCount: nodes.length,
       connectionCount: edges.length,
       nodes: previewNodes,
       edges: previewEdges,
+    };
+  }
+
+  private async buildDeckListPreview(nodes: DeckNode[]) {
+    const orderedCardNodes = [...nodes]
+      .filter(
+        (node): node is DeckNode & { cardId: number } =>
+          node.type === DeckNodeType.CARD && node.cardId != null,
+      )
+      .sort((a, b) => {
+        if (a.order === b.order) return a.id - b.id;
+        return a.order - b.order;
+      });
+
+    if (orderedCardNodes.length === 0) {
+      return {
+        version: 1 as const,
+        kind: 'list' as const,
+        itemCount: 0,
+        items: [],
+      };
+    }
+
+    const previewTargetNodes = orderedCardNodes.slice(0, 5);
+    const targetCardIds = previewTargetNodes.map((node) => node.cardId);
+
+    const cards = await this.cardRepository
+      .createQueryBuilder('card')
+      .leftJoinAndSelect('card.book', 'book')
+      .where('card.id IN (:...cardIds)', { cardIds: targetCardIds })
+      .select([
+        'card.id',
+        'card.type',
+        'card.thought',
+        'book.id',
+        'book.title',
+        'book.backgroundImage',
+      ])
+      .getMany();
+
+    const cardById = new Map(cards.map((card) => [card.id, card]));
+
+    const items = previewTargetNodes.reduce<
+      Array<{
+        t: 'insight' | 'change' | 'action' | 'question';
+        title: string;
+        cover: string | null;
+        book: string | null;
+      }>
+    >((acc, node) => {
+      const card = cardById.get(node.cardId);
+      if (!card) return acc;
+
+      const normalizedTitle = card.thought?.trim() || `Card #${card.id}`;
+      const truncatedTitle =
+        normalizedTitle.length > 40
+          ? `${normalizedTitle.slice(0, 40)}...`
+          : normalizedTitle;
+
+      acc.push({
+        t: card.type,
+        title: truncatedTitle,
+        cover: card.book?.backgroundImage ?? null,
+        book: card.book?.title ?? null,
+      });
+      return acc;
+    }, []);
+
+    return {
+      version: 1 as const,
+      kind: 'list' as const,
+      itemCount: orderedCardNodes.length,
+      items,
     };
   }
 
