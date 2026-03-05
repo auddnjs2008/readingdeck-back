@@ -1,6 +1,6 @@
 import { Type } from 'class-transformer';
 import { IsEnum, IsInt, IsOptional, IsString, Min } from 'class-validator';
-import { DeckStatus } from '../entity/deck.entity';
+import { DeckMode, DeckStatus } from '../entity/deck.entity';
 
 enum SortType {
   LATEST = 'latest',
@@ -19,6 +19,10 @@ export class GetDecksQueryDto {
   @IsInt()
   @Min(1)
   cursor?: number;
+
+  @IsOptional()
+  @IsEnum(DeckMode)
+  mode?: DeckMode;
 
   @IsOptional()
   @IsEnum(DeckStatus)

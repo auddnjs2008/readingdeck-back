@@ -68,6 +68,10 @@ export class DeckService {
       qb.andWhere('deck.status = :status', { status: dto.status });
     }
 
+    if (dto.mode) {
+      qb.andWhere('deck.mode = :mode', { mode: dto.mode });
+    }
+
     if (dto.keyword?.trim()) {
       qb.andWhere('deck.name ILIKE :keyword', {
         keyword: `%${dto.keyword.trim()}%`,
