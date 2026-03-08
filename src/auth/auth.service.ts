@@ -20,11 +20,12 @@ export class AuthService {
   private getCookieOptions(maxAge: number) {
     const isProduction =
       this.configService.get<string>(envVariableKeys.env) === 'prod';
+    const sameSite: 'none' | 'lax' = isProduction ? 'none' : 'lax';
 
     return {
       httpOnly: true,
       secure: isProduction,
-      sameSite: (isProduction ? 'none' : 'lax') as const,
+      sameSite,
       maxAge,
     };
   }
