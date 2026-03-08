@@ -17,19 +17,25 @@ import { DeckNode } from './deck-node/entity/deck-node.entity';
 import { DeckConnection } from './deck-connection/entity/deck-connection.entity';
 import { DeckModule } from './deck/deck.module';
 
+const getEnvFilePath = () => {
+  switch (process.env.ENV) {
+    case 'prod':
+      return ['env/.env.prod', '.env'];
+    case 'dev':
+      return ['env/.env.dev', '.env'];
+    default:
+      return ['env/.env.local', '.env'];
+  }
+};
+
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: process.env.NODE_ENV === 'test' ? 'test.env' : '.env',
+      envFilePath: getEnvFilePath(),
       validationSchema: Joi.object({
-        ENV: Joi.string().valid('test', 'dev', 'prod').required(),
-        DB_TYPE: Joi.string().valid('postgres').required(),
-        DB_HOST: Joi.string().required(),
-        DB_PORT: Joi.number().required(),
-        DB_USERNAME: Joi.string().required(),
-        DB_PASSWORD: Joi.string().required(),
-        DB_DATABASE: Joi.string().required(),
+        ENV: Joi.string().valid('local', 'test', 'dev', 'prod').required(),
+        DATABASE_URL: Joi.string().uri().optional(),
         GOOGLE_CLIENT_ID: Joi.string().required(),
         GOOGLE_CLIENT_SECRET: Joi.string().required(),
         GOOGLE_CALLBACK_URL: Joi.string().required(),
@@ -40,16 +46,18 @@ import { DeckModule } from './deck/deck.module';
     }),
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        type: configService.get<string>(envVariableKeys.dbType) as 'postgres',
-        host: configService.get<string>(envVariableKeys.dbHost),
-        port: configService.get<number>(envVariableKeys.dbPort),
-        username: configService.get<string>(envVariableKeys.dbUsername),
-        password: configService.get<string>(envVariableKeys.dbPassword),
-        database: configService.get<string>(envVariableKeys.dbDatabase),
-        entities: [User, Book, Card, Deck, DeckNode, DeckConnection],
-        synchronize: true,
-      }),
+      useFactory: (configService: ConfigService) => {
+        const databaseUrl = configService.get<string>(
+          envVariableKeys.databaseUrl,
+        );
+
+        return {
+          type: 'postgres' as const,
+          url: databaseUrl,
+          entities: [User, Book, Card, Deck, DeckNode, DeckConnection],
+          synchronize: true,
+        };
+      },
     }),
     AuthModule,
     BookModule,
