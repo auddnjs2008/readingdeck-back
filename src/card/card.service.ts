@@ -16,6 +16,7 @@ import {
   GetBookCardsQueryDto,
 } from './dto/get-bookcards-query.dto';
 import { UpdateCardDto } from './dto/update-card.dto';
+import { S3Service } from 'src/common/service/s3.service';
 
 @Injectable()
 export class CardService {
@@ -26,7 +27,27 @@ export class CardService {
     private readonly bookRepository: Repository<Book>,
     @InjectRepository(Card)
     private readonly cardRepository: Repository<Card>,
+    private readonly s3Service: S3Service,
   ) {}
+
+  private mapCardBookImage<
+    T extends { book?: { backgroundImage?: string | null } | null },
+  >(card: T): T {
+    if (!card.book) {
+      return card;
+    }
+
+    return {
+      ...card,
+      book: {
+        ...card.book,
+        backgroundImage: this.s3Service.resolvePublicUrl(
+          card.book.backgroundImage,
+        ),
+      },
+    };
+  }
+
   async getTodayCards(userId: number, query: GetTodayCardsQueryDto) {
     const { limit = 3 } = query;
     const startOfDay = new Date();
@@ -34,7 +55,7 @@ export class CardService {
     const endOfDay = new Date();
     endOfDay.setHours(23, 59, 59, 999);
 
-    return this.cardRepository
+    const items = await this.cardRepository
       .createQueryBuilder('card')
       .leftJoinAndSelect('card.book', 'book')
       .where('book.userId = :userId', { userId })
@@ -45,6 +66,8 @@ export class CardService {
       .orderBy('card.createdAt', 'DESC')
       .take(limit)
       .getMany();
+
+    return items.map((card) => this.mapCardBookImage(card));
   }
 
   async getBookCards(

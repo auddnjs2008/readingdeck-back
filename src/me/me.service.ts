@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Book } from 'src/book/entity/book.entity';
 import { Card } from 'src/card/entity/card.entity';
+import { S3Service } from 'src/common/service/s3.service';
 import { User } from 'src/user/entity/user.entity';
 import { Between, In, Repository } from 'typeorm';
 
@@ -14,7 +15,30 @@ export class MeService {
     private readonly userRepository: Repository<User>,
     @InjectRepository(Card)
     private readonly cardRepository: Repository<Card>,
+    private readonly s3Service: S3Service,
   ) {}
+
+  private mapBookImage<T extends { backgroundImage?: string | null }>(
+    book: T,
+  ): T {
+    return {
+      ...book,
+      backgroundImage: this.s3Service.resolvePublicUrl(book.backgroundImage),
+    };
+  }
+
+  private mapCardBookImage<
+    T extends { book?: { backgroundImage?: string | null } | null },
+  >(card: T): T {
+    if (!card.book) {
+      return card;
+    }
+
+    return {
+      ...card,
+      book: this.mapBookImage(card.book),
+    };
+  }
 
   async getMyProfile(userId: number) {
     const user = await this.userRepository.findOne({ where: { id: userId } });
@@ -72,7 +96,7 @@ export class MeService {
       take: 10,
     });
 
-    return { items: latestCards };
+    return { items: latestCards.map((card) => this.mapCardBookImage(card)) };
   }
 
   async getLatestBookList(userId: number) {
@@ -103,6 +127,6 @@ export class MeService {
       .map((id) => bookMap.get(id))
       .filter((book): book is Book => Boolean(book));
 
-    return { items: orderedBooks };
+    return { items: orderedBooks.map((book) => this.mapBookImage(book)) };
   }
 }

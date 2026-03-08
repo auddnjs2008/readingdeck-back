@@ -10,19 +10,27 @@ import { lastValueFrom } from 'rxjs';
 export class S3Service {
   private s3: S3Client;
   private bucket: string;
+  private region: string;
+  private assetBaseUrl: string;
 
   constructor(
     private readonly httpService: HttpService,
     private readonly configService: ConfigService,
   ) {
+    this.region = configService.get<string>(envVariableKeys.awsRegion);
     this.s3 = new S3Client({
-      region: configService.get<string>(envVariableKeys.awsRegion),
+      region: this.region,
     });
     this.bucket = configService.get<string>(envVariableKeys.bucketName);
+    this.assetBaseUrl =
+      configService
+        .get<string>(envVariableKeys.assetBaseUrl)
+        ?.replace(/\/+$/, '') ??
+      `https://${this.bucket}.s3.${this.region}.amazonaws.com`;
   }
 
   async uploadImage(file: Express.Multer.File) {
-    const key = `books/${uuid()}-${file.originalname}}`;
+    const key = `books/${uuid()}-${file.originalname}`;
 
     await this.s3.send(
       new PutObjectCommand({
@@ -33,7 +41,7 @@ export class S3Service {
       }),
     );
 
-    return `https://${this.bucket}.s3.${this.configService.get<string>(envVariableKeys.awsRegion)}.amazonaws.com/${key}`;
+    return key;
   }
 
   async uploadImageByUrl(url: string) {
@@ -58,6 +66,18 @@ export class S3Service {
       }),
     );
 
-    return `https://${this.bucket}.s3.${this.configService.get<string>(envVariableKeys.awsRegion)}.amazonaws.com/${key}`;
+    return key;
+  }
+
+  resolvePublicUrl(keyOrUrl?: string | null) {
+    if (!keyOrUrl) {
+      return null;
+    }
+
+    if (/^https?:\/\//i.test(keyOrUrl)) {
+      return keyOrUrl;
+    }
+
+    return `${this.assetBaseUrl}/${keyOrUrl.replace(/^\/+/, '')}`;
   }
 }

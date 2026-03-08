@@ -16,6 +16,7 @@ import { Deck } from './deck/entity/deck.entity';
 import { DeckNode } from './deck-node/entity/deck-node.entity';
 import { DeckConnection } from './deck-connection/entity/deck-connection.entity';
 import { DeckModule } from './deck/deck.module';
+import { CommonModule } from './common/common.module';
 
 const getEnvFilePath = () => {
   switch (process.env.ENV) {
@@ -30,12 +31,14 @@ const getEnvFilePath = () => {
 
 @Module({
   imports: [
+    CommonModule,
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: getEnvFilePath(),
       validationSchema: Joi.object({
         ENV: Joi.string().valid('local', 'test', 'dev', 'prod').required(),
         DATABASE_URL: Joi.string().uri().optional(),
+        ASSET_BASE_URL: Joi.string().uri().optional(),
         GOOGLE_CLIENT_ID: Joi.string().required(),
         GOOGLE_CLIENT_SECRET: Joi.string().required(),
         GOOGLE_CALLBACK_URL: Joi.string().required(),
@@ -50,12 +53,14 @@ const getEnvFilePath = () => {
         const databaseUrl = configService.get<string>(
           envVariableKeys.databaseUrl,
         );
+        const env = configService.get<string>(envVariableKeys.env);
+        const isProduction = env === 'prod';
 
         return {
           type: 'postgres' as const,
           url: databaseUrl,
           entities: [User, Book, Card, Deck, DeckNode, DeckConnection],
-          synchronize: true,
+          synchronize: !isProduction,
         };
       },
     }),

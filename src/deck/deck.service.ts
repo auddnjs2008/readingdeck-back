@@ -18,6 +18,7 @@ import { PublishDeckDto } from './dto/publish-deck.dto';
 import { UpdateDeckDto } from './dto/update-deck.dto';
 import { UpdateDeckGraphDto } from './dto/update-deck-graph.dto';
 import { Deck, DeckMode, DeckStatus } from './entity/deck.entity';
+import { S3Service } from 'src/common/service/s3.service';
 
 type DeckListRawRow = {
   id: number;
@@ -47,6 +48,7 @@ export class DeckService {
     private readonly bookRepository: Repository<Book>,
     @InjectRepository(Card)
     private readonly cardRepository: Repository<Card>,
+    private readonly s3Service: S3Service,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -290,7 +292,9 @@ export class DeckService {
               title: relatedBook.title,
               author: relatedBook.author,
               publisher: relatedBook.publisher,
-              backgroundImage: relatedBook.backgroundImage ?? null,
+              backgroundImage: this.s3Service.resolvePublicUrl(
+                relatedBook.backgroundImage,
+              ),
               createdAt: relatedBook.createdAt,
               updatedAt: relatedBook.updatedAt,
               version: relatedBook.version,
@@ -302,7 +306,9 @@ export class DeckService {
               type: node.card.type,
               quote: node.card.quote ?? null,
               thought: node.card.thought,
-              backgroundImage: node.card.backgroundImage ?? null,
+              backgroundImage: this.s3Service.resolvePublicUrl(
+                node.card.backgroundImage,
+              ),
               pageStart: node.card.pageStart ?? null,
               pageEnd: node.card.pageEnd ?? null,
               createdAt: node.card.createdAt,
@@ -598,7 +604,7 @@ export class DeckService {
       acc.push({
         t: card.type,
         title: truncatedTitle,
-        cover: card.book?.backgroundImage ?? null,
+        cover: this.s3Service.resolvePublicUrl(card.book?.backgroundImage),
         book: card.book?.title ?? null,
       });
       return acc;

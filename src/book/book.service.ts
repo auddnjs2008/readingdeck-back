@@ -24,6 +24,15 @@ export class BookService {
     private readonly kakaoBookService: KakaoBookService,
   ) {}
 
+  private mapBookImage<T extends { backgroundImage?: string | null }>(
+    book: T,
+  ): T {
+    return {
+      ...book,
+      backgroundImage: this.s3Service.resolvePublicUrl(book.backgroundImage),
+    };
+  }
+
   async getBooks(userId: number, query: GetBookQueryDto) {
     const { page = 1, take = 10, keyword, sort } = query;
     const skip = (page - 1) * take;
@@ -98,7 +107,7 @@ export class BookService {
       });
 
       return {
-        items,
+        items: items.map((book) => this.mapBookImage(book)),
         meta: { total, page, take, totalPages: Math.ceil(total / take) },
       };
     }
@@ -113,7 +122,7 @@ export class BookService {
     const total = await qb.clone().orderBy().getCount();
 
     return {
-      items,
+      items: items.map((book) => this.mapBookImage(book)),
       meta: { total, page, take, totalPages: Math.ceil(total / take) },
     };
   }
@@ -125,7 +134,7 @@ export class BookService {
       throw new NotFoundException('해당 관련 책을 찾을 수 없습니다.');
     }
 
-    return book;
+    return this.mapBookImage(book);
   }
 
   async searchBooks(query: SearchBookQueryDto) {
@@ -163,6 +172,7 @@ export class BookService {
       user,
     });
 
-    return this.bookRepository.save(book);
+    const savedBook = await this.bookRepository.save(book);
+    return this.mapBookImage(savedBook);
   }
 }

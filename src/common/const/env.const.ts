@@ -1,6 +1,7 @@
 export const envVariableKeys = {
   env: 'ENV',
   databaseUrl: 'DATABASE_URL',
+  assetBaseUrl: 'ASSET_BASE_URL',
   googleClientId: 'GOOGLE_CLIENT_ID',
   googleClientSecret: 'GOOGLE_CLIENT_SECRET',
   googleCallbackUrl: 'GOOGLE_CALLBACK_URL',
@@ -8,7 +9,7 @@ export const envVariableKeys = {
   refreshTokenSecret: 'REFRESH_TOKEN_SECRET',
   frontLoginRedirectUrl: 'FRONT_LOGIN_REDIRECT_URL',
   awsSecretAccessKey: 'AWS_SECRET_ACCESS_KEY',
-  awsAccessKey: 'AKIAY2LKRQET7E4FLDCM',
+  awsAccessKey: 'AWS_ACCESS_KEY_ID',
   awsRegion: 'AWS_REGION',
   bucketName: 'BUCKET_NAME',
   kakaoRestApiKey: 'KAKAO_REST_API_KEY',
