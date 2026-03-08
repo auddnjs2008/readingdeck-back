@@ -17,6 +17,18 @@ export class AuthService {
     private readonly configService: ConfigService,
   ) {}
 
+  private getCookieOptions(maxAge: number) {
+    const isProduction =
+      this.configService.get<string>(envVariableKeys.env) === 'prod';
+
+    return {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: (isProduction ? 'none' : 'lax') as const,
+      maxAge,
+    };
+  }
+
   async validateGoogleUser(profile: Profile) {
     const provider = AuthProvider.GOOGLE;
     const providerUserId = profile.id;
@@ -68,19 +80,17 @@ export class AuthService {
     const accessToken = await this.issueAccessToken(user);
     const refreshToken = await this.issueRefreshToken(user);
 
-    res.cookie('access_token', accessToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'prod',
-      sameSite: 'lax',
-      maxAge: 5 * 60 * 1000,
-    });
+    res.cookie(
+      'access_token',
+      accessToken,
+      this.getCookieOptions(5 * 60 * 1000),
+    );
 
-    res.cookie('refresh_token', refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'prod',
-      sameSite: 'lax',
-      maxAge: 24 * 60 * 60 * 1000,
-    });
+    res.cookie(
+      'refresh_token',
+      refreshToken,
+      this.getCookieOptions(24 * 60 * 60 * 1000),
+    );
 
     return {
       redirectUrl: this.configService.get<string>(
@@ -90,16 +100,19 @@ export class AuthService {
   }
 
   clearCookies(res: Response) {
+    const isProduction =
+      this.configService.get<string>(envVariableKeys.env) === 'prod';
+
     res.clearCookie('access_token', {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'prod',
-      sameSite: process.env.NODE_ENV === 'prod' ? 'lax' : 'none',
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'lax',
     });
 
     res.clearCookie('refresh_token', {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'prod',
-      sameSite: process.env.NODE_ENV === 'prod' ? 'lax' : 'none',
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'lax',
     });
   }
 
@@ -126,12 +139,11 @@ export class AuthService {
       }
 
       const newAccessToken = await this.issueAccessToken(user);
-      res.cookie('access_token', newAccessToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'prod',
-        sameSite: 'lax',
-        maxAge: 15 * 60 * 1000,
-      });
+      res.cookie(
+        'access_token',
+        newAccessToken,
+        this.getCookieOptions(15 * 60 * 1000),
+      );
       return { ok: true };
     } catch {
       this.clearCookies(res);

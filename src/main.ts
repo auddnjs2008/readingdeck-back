@@ -6,9 +6,13 @@ import * as cookieParser from 'cookie-parser';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  const frontRedirectUrl = process.env.FRONT_LOGIN_REDIRECT_URL;
+  const frontOrigin = frontRedirectUrl
+    ? new URL(frontRedirectUrl).origin
+    : undefined;
   const corsOrigins = [
     'http://localhost:4000',
-    process.env.FRONT_LOGIN_REDIRECT_URL,
+    frontOrigin,
   ].filter((url): url is string => Boolean(url));
 
   app.enableCors({
