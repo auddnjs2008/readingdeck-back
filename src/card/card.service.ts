@@ -191,18 +191,7 @@ export class CardService {
     cardId: number,
     updateCardDto: UpdateCardDto,
   ) {
-    const card = await this.cardRepository.findOne({
-      where: { id: cardId },
-      relations: { book: { user: true } },
-    });
-
-    if (!card) {
-      throw new NotFoundException('해당 카드를 찾을 수 없습니다.');
-    }
-
-    if (card.book.user.id !== userId) {
-      throw new ForbiddenException('이 카드를 수정할 권한이 없습니다.');
-    }
+    const card = await this.findOwnedCard(userId, cardId);
 
     const nextPageStart =
       updateCardDto.pageStart !== undefined
@@ -240,5 +229,28 @@ export class CardService {
     }
 
     return this.cardRepository.save(card);
+  }
+
+  async deleteCard(userId: number, cardId: number) {
+    const card = await this.findOwnedCard(userId, cardId);
+
+    await this.cardRepository.delete({ id: card.id });
+  }
+
+  private async findOwnedCard(userId: number, cardId: number) {
+    const card = await this.cardRepository.findOne({
+      where: { id: cardId },
+      relations: { book: { user: true } },
+    });
+
+    if (!card) {
+      throw new NotFoundException('해당 카드를 찾을 수 없습니다.');
+    }
+
+    if (card.book.user.id !== userId) {
+      throw new ForbiddenException('접근 권한이 없습니다.');
+    }
+
+    return card;
   }
 }

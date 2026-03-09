@@ -1,7 +1,10 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   ParseIntPipe,
   Patch,
@@ -30,5 +33,12 @@ export class CardController {
   ) {
     const userId = req.user.sub;
     return this.cardService.updateCard(userId, cardId, updateCardDto);
+  }
+
+  @Delete(':cardId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  deleteCard(@Req() req: any, @Param('cardId', ParseIntPipe) cardId: number) {
+    const userId = req.user.sub;
+    return this.cardService.deleteCard(userId, cardId);
   }
 }
