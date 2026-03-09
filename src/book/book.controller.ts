@@ -1,7 +1,10 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   ParseIntPipe,
   Post,
@@ -71,5 +74,12 @@ export class BookController {
   ) {
     const userId = req.user.sub;
     return this.cardService.createCard(userId, bookId, createCardDto);
+  }
+
+  @Delete(':bookId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  deleteBook(@Req() req: any, @Param('bookId', ParseIntPipe) bookId: number) {
+    const userId = req.user.sub;
+    return this.bookService.deleteBook(userId, bookId);
   }
 }

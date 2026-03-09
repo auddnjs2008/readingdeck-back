@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Book } from './entity/book.entity';
 import { In, Repository } from 'typeorm';
@@ -137,6 +142,21 @@ export class BookService {
     return this.mapBookImage(book);
   }
 
+  async deleteBook(userId: number, bookId: number) {
+    const book = await this.findOwnedBook(userId, bookId);
+    const cardCount = await this.cardRepository.count({
+      where: { book: { id: book.id } },
+    });
+
+    if (cardCount > 0) {
+      throw new ConflictException(
+        '연결된 카드가 있는 책은 삭제할 수 없습니다.',
+      );
+    }
+
+    await this.bookRepository.delete({ id: book.id });
+  }
+
   async searchBooks(query: SearchBookQueryDto) {
     return this.kakaoBookService.searchBooks(query);
   }
@@ -174,5 +194,22 @@ export class BookService {
 
     const savedBook = await this.bookRepository.save(book);
     return this.mapBookImage(savedBook);
+  }
+
+  private async findOwnedBook(userId: number, bookId: number) {
+    const book = await this.bookRepository.findOne({
+      where: { id: bookId },
+      relations: { user: true },
+    });
+
+    if (!book) {
+      throw new NotFoundException('해당 관련 책을 찾을 수 없습니다.');
+    }
+
+    if (book.user.id !== userId) {
+      throw new ForbiddenException('접근 권한이 없습니다.');
+    }
+
+    return book;
   }
 }

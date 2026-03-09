@@ -10,10 +10,9 @@ async function bootstrap() {
   const frontOrigin = frontRedirectUrl
     ? new URL(frontRedirectUrl).origin
     : undefined;
-  const corsOrigins = [
-    'http://localhost:4000',
-    frontOrigin,
-  ].filter((url): url is string => Boolean(url));
+  const corsOrigins = ['http://localhost:4000', frontOrigin].filter(
+    (url): url is string => Boolean(url),
+  );
 
   app.enableCors({
     origin: [...new Set(corsOrigins)],
