@@ -1,6 +1,7 @@
 import { Type } from 'class-transformer';
 import {
   IsEnum,
+  MaxLength,
   IsOptional,
   IsString,
   Length,
@@ -15,6 +16,11 @@ export class CreateDeckDto {
   @IsString()
   @Length(1, 255)
   name?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  description?: string;
 
   @IsOptional()
   @IsEnum(DeckStatus)

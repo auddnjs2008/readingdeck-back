@@ -1,4 +1,10 @@
-import { IsEnum, IsOptional, IsString, Length } from 'class-validator';
+import {
+  IsEnum,
+  IsOptional,
+  IsString,
+  Length,
+  MaxLength,
+} from 'class-validator';
 import { DeckMode } from '../entity/deck.entity';
 
 export class UpdateDeckDto {
@@ -6,6 +12,11 @@ export class UpdateDeckDto {
   @IsString()
   @Length(1, 255)
   name?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  description?: string;
 
   @IsOptional()
   @IsEnum(DeckMode)

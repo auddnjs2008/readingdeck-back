@@ -57,6 +57,9 @@ export class Deck extends BaseTable {
   @Column({ length: 255, default: 'Untitled Deck' })
   name: string;
 
+  @Column({ type: 'text', nullable: true })
+  description: string | null;
+
   @Column()
   userId: number;
 

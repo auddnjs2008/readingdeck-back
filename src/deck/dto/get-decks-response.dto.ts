@@ -3,6 +3,7 @@ import { DeckMode, DeckPreview, DeckStatus } from '../entity/deck.entity';
 export class DeckListItemResponseDto {
   id: number;
   name: string;
+  description: string | null;
   status: DeckStatus;
   mode: DeckMode;
   createdAt: Date;

@@ -23,6 +23,7 @@ import { S3Service } from 'src/common/service/s3.service';
 type DeckListRawRow = {
   id: number;
   name: string;
+  description: string | null;
   status: DeckStatus;
   mode: DeckMode;
   createdAt: Date | string;
@@ -51,6 +52,11 @@ export class DeckService {
     private readonly s3Service: S3Service,
     private readonly dataSource: DataSource,
   ) {}
+
+  private normalizeDescription(description?: string | null) {
+    const normalized = description?.trim();
+    return normalized ? normalized : null;
+  }
 
   async getDecks(
     userId: number,
@@ -85,6 +91,7 @@ export class DeckService {
     const rows = await qb
       .select('deck.id', 'id')
       .addSelect('deck.name', 'name')
+      .addSelect('deck.description', 'description')
       .addSelect('deck.status', 'status')
       .addSelect('deck.mode', 'mode')
       .addSelect('deck.createdAt', 'createdAt')
@@ -128,6 +135,7 @@ export class DeckService {
       return {
         id: Number(row.id),
         name: row.name,
+        description: row.description ?? null,
         status: row.status,
         mode: row.mode,
         createdAt,
@@ -164,6 +172,7 @@ export class DeckService {
       const deck = await deckRepo.save(
         deckRepo.create({
           name: dto.name?.trim() || 'Untitled Deck',
+          description: this.normalizeDescription(dto.description),
           status: dto.status ?? DeckStatus.DRAFT,
           mode: dto.mode ?? DeckMode.GRAPH,
           userId,
@@ -332,6 +341,9 @@ export class DeckService {
     if (dto.name?.trim()) {
       deck.name = dto.name.trim();
     }
+    if (dto.description !== undefined) {
+      deck.description = this.normalizeDescription(dto.description);
+    }
     if (dto.mode) {
       deck.mode = dto.mode;
     }
@@ -341,6 +353,7 @@ export class DeckService {
     return {
       id: savedDeck.id,
       name: savedDeck.name,
+      description: savedDeck.description,
       status: savedDeck.status,
       mode: savedDeck.mode,
       updatedAt: savedDeck.updatedAt,
@@ -431,6 +444,9 @@ export class DeckService {
     if (dto.name?.trim()) {
       deck.name = dto.name.trim();
     }
+    if (dto.description !== undefined) {
+      deck.description = this.normalizeDescription(dto.description);
+    }
     deck.status = DeckStatus.PUBLISHED;
 
     const savedDeck = await this.deckRepository.save(deck);
@@ -438,6 +454,7 @@ export class DeckService {
     return {
       id: savedDeck.id,
       name: savedDeck.name,
+      description: savedDeck.description,
       status: savedDeck.status,
       mode: savedDeck.mode,
       updatedAt: savedDeck.updatedAt,
