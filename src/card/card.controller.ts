@@ -35,6 +35,12 @@ export class CardController {
     return this.cardService.updateCard(userId, cardId, updateCardDto);
   }
 
+  @Patch(':cardId/revisit')
+  revisitCard(@Req() req: any, @Param('cardId', ParseIntPipe) cardId: number) {
+    const userId = req.user.sub;
+    return this.cardService.revisitCard(userId, cardId);
+  }
+
   @Delete(':cardId')
   @HttpCode(HttpStatus.NO_CONTENT)
   deleteCard(@Req() req: any, @Param('cardId', ParseIntPipe) cardId: number) {

@@ -231,6 +231,15 @@ export class CardService {
     return this.cardRepository.save(card);
   }
 
+  async revisitCard(userId: number, cardId: number) {
+    const card = await this.findOwnedCard(userId, cardId);
+
+    card.lastRevisitedAt = new Date();
+    card.revisitCount = (card.revisitCount ?? 0) + 1;
+
+    return this.cardRepository.save(card);
+  }
+
   async deleteCard(userId: number, cardId: number) {
     const card = await this.findOwnedCard(userId, cardId);
 

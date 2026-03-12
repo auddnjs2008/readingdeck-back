@@ -99,6 +99,46 @@ export class MeService {
     return { items: latestCards.map((card) => this.mapCardBookImage(card)) };
   }
 
+  async getRevisitCardStack(userId: number) {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('해당 유저가 존재하지 않습니다.');
+    }
+
+    const cards = await this.cardRepository.find({
+      where: {
+        book: { user: { id: userId } },
+      },
+      relations: { book: true },
+      order: {
+        lastRevisitedAt: 'ASC',
+        createdAt: 'ASC',
+      },
+      take: 30,
+    });
+
+    const prioritized = cards.sort((a, b) => {
+      const aNeverRevisited = a.lastRevisitedAt == null ? 0 : 1;
+      const bNeverRevisited = b.lastRevisitedAt == null ? 0 : 1;
+
+      if (aNeverRevisited !== bNeverRevisited) {
+        return aNeverRevisited - bNeverRevisited;
+      }
+
+      const aTime = a.lastRevisitedAt?.getTime() ?? 0;
+      const bTime = b.lastRevisitedAt?.getTime() ?? 0;
+      if (aTime !== bTime) {
+        return aTime - bTime;
+      }
+
+      return a.createdAt.getTime() - b.createdAt.getTime();
+    });
+
+    return {
+      items: prioritized.slice(0, 6).map((card) => this.mapCardBookImage(card)),
+    };
+  }
+
   async getLatestBookList(userId: number) {
     const user = await this.userRepository.findOne({ where: { id: userId } });
     if (!user) {

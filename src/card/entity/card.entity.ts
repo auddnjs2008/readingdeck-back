@@ -42,6 +42,12 @@ export class Card extends BaseTable {
   @Column({ nullable: true })
   pageEnd: number;
 
+  @Column({ type: 'timestamp', nullable: true })
+  lastRevisitedAt: Date | null;
+
+  @Column({ type: 'integer', default: 0 })
+  revisitCount: number;
+
   @OneToMany(() => DeckNode, (deckNode) => deckNode.card)
   deckNodes: DeckNode[];
 }

@@ -23,6 +23,12 @@ export class MeController {
     return this.MeService.getDailyCardStack(userId);
   }
 
+  @Get('revisit-card-stack')
+  async getRevisitCardStack(@Req() req: any) {
+    const userId = req.user.sub;
+    return this.MeService.getRevisitCardStack(userId);
+  }
+
   @Get('latest-book-list')
   async getLatestBookList(@Req() req: any) {
     const userId = req.user.sub;
