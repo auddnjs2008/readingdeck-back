@@ -70,6 +70,42 @@ export class CardService {
     return items.map((card) => this.mapCardBookImage(card));
   }
 
+  async getCardDetail(userId: number, cardId: number) {
+    const card = await this.cardRepository.findOne({
+      where: { id: cardId },
+      relations: { book: { user: true } },
+    });
+
+    if (!card) {
+      throw new NotFoundException('해당 카드를 찾을 수 없습니다.');
+    }
+
+    if (card.book.user.id !== userId) {
+      throw new ForbiddenException('접근 권한이 없습니다.');
+    }
+
+    return this.mapCardBookImage({
+      id: card.id,
+      type: card.type,
+      quote: card.quote,
+      thought: card.thought,
+      backgroundImage: card.backgroundImage,
+      pageStart: card.pageStart,
+      pageEnd: card.pageEnd,
+      revisitCount: card.revisitCount,
+      lastRevisitedAt: card.lastRevisitedAt,
+      createdAt: card.createdAt,
+      updatedAt: card.updatedAt,
+      book: {
+        id: card.book.id,
+        title: card.book.title,
+        author: card.book.author,
+        publisher: card.book.publisher,
+        backgroundImage: card.book.backgroundImage,
+      },
+    });
+  }
+
   async getBookCards(
     userId: number,
     bookId: number,

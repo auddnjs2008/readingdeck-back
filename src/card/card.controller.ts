@@ -25,6 +25,15 @@ export class CardController {
     return this.cardService.getTodayCards(userId, query);
   }
 
+  @Get(':cardId')
+  getCardDetail(
+    @Req() req: any,
+    @Param('cardId', ParseIntPipe) cardId: number,
+  ) {
+    const userId = req.user.sub;
+    return this.cardService.getCardDetail(userId, cardId);
+  }
+
   @Patch(':cardId')
   updateCard(
     @Req() req: any,
