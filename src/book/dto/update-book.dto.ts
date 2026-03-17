@@ -4,30 +4,12 @@ import {
   IsEnum,
   IsInt,
   IsOptional,
-  IsString,
   Max,
   Min,
 } from 'class-validator';
 import { BookStatus } from '../entity/book.entity';
 
-export class CreateBookDto {
-  @IsString()
-  title: string;
-
-  @IsString()
-  author: string;
-
-  @IsString()
-  publisher: string;
-
-  @IsString()
-  @IsOptional()
-  contents: string;
-
-  @IsOptional()
-  @IsString()
-  imageUrl: string;
-
+export class UpdateBookDto {
   @IsOptional()
   @IsEnum(BookStatus)
   status?: BookStatus;

@@ -10,6 +10,12 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 
+export enum BookStatus {
+  READING = 'reading',
+  FINISHED = 'finished',
+  PAUSED = 'paused',
+}
+
 @Entity()
 export class Book extends BaseTable {
   @PrimaryGeneratedColumn()
@@ -29,6 +35,21 @@ export class Book extends BaseTable {
 
   @Column({ nullable: true })
   backgroundImage?: string;
+
+  @Column({ type: 'enum', enum: BookStatus, default: BookStatus.PAUSED })
+  status: BookStatus;
+
+  @Column({ type: 'integer', nullable: true })
+  currentPage: number | null;
+
+  @Column({ type: 'integer', nullable: true })
+  totalPages: number | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  startedAt: Date | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  finishedAt: Date | null;
 
   @ManyToOne(() => User, (user) => user.books, { onDelete: 'CASCADE' })
   user: User;
