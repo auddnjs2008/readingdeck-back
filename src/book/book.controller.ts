@@ -7,6 +7,7 @@ import {
   HttpStatus,
   Param,
   ParseIntPipe,
+  Patch,
   Post,
   Query,
   Req,
@@ -21,6 +22,7 @@ import { GetBookCardsQueryDto } from '../card/dto/get-bookcards-query.dto';
 import { SearchBookQueryDto } from './dto/search-book-query.dto';
 import { CreateCardDto } from 'src/card/dto/create-card.dto';
 import { CardService } from 'src/card/card.service';
+import { UpdateBookDto } from './dto/update-book.dto';
 
 @Controller('books')
 export class BookController {
@@ -41,8 +43,19 @@ export class BookController {
   }
 
   @Get(':bookId')
-  getBook(@Param('bookId', ParseIntPipe) bookId: number) {
-    return this.bookService.getBook(bookId);
+  getBook(@Req() req: any, @Param('bookId', ParseIntPipe) bookId: number) {
+    const userId = req.user.sub;
+    return this.bookService.getBook(userId, bookId);
+  }
+
+  @Patch(':bookId')
+  updateBook(
+    @Req() req: any,
+    @Param('bookId', ParseIntPipe) bookId: number,
+    @Body() updateBookDto: UpdateBookDto,
+  ) {
+    const userId = req.user.sub;
+    return this.bookService.updateBook(userId, bookId, updateBookDto);
   }
 
   @Get(':bookId/cards')
