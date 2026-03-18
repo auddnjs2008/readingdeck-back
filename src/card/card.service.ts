@@ -175,7 +175,6 @@ export class CardService {
     cardQb.take(take + 1);
 
     const items = await cardQb.getMany();
-    console.log(items, 'items');
 
     const hasNext = items.length > take;
     const trimmedItems = hasNext ? items.slice(0, take) : items;
@@ -214,8 +213,27 @@ export class CardService {
       throw new ForbiddenException('이 책에 카드를 추가할 권한이 없습니다.');
     }
 
+    const thought = createCardDto.thought.trim();
+    const quote = createCardDto.quote?.trim() || undefined;
+
+    if (!thought) {
+      throw new BadRequestException('thought는 비어 있을 수 없습니다.');
+    }
+
+    if (
+      createCardDto.pageStart !== null &&
+      createCardDto.pageStart !== undefined &&
+      createCardDto.pageEnd !== null &&
+      createCardDto.pageEnd !== undefined &&
+      createCardDto.pageStart > createCardDto.pageEnd
+    ) {
+      throw new BadRequestException('pageStart는 pageEnd보다 클 수 없습니다.');
+    }
+
     const card = this.cardRepository.create({
       ...createCardDto,
+      thought,
+      quote,
       book: { id: bookId },
     });
 
