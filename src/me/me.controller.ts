@@ -29,6 +29,12 @@ export class MeController {
     return this.MeService.getRevisitCardStack(userId);
   }
 
+  @Get('home-summary')
+  async getHomeSummary(@Req() req: any) {
+    const userId = req.user.sub;
+    return this.MeService.getHomeSummary(userId);
+  }
+
   @Get('latest-book-list')
   async getLatestBookList(@Req() req: any) {
     const userId = req.user.sub;
