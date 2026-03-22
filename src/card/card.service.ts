@@ -17,6 +17,7 @@ import {
 } from './dto/get-bookcards-query.dto';
 import { UpdateCardDto } from './dto/update-card.dto';
 import { S3Service } from 'src/common/service/s3.service';
+import { BookStatus } from 'src/book/entity/book.entity';
 
 @Injectable()
 export class CardService {
@@ -237,7 +238,17 @@ export class CardService {
       book: { id: bookId },
     });
 
-    return this.cardRepository.save(card);
+    const savedCard = await this.cardRepository.save(card);
+
+    if (book.status === BookStatus.PAUSED) {
+      book.status = BookStatus.READING;
+      if (!book.startedAt) {
+        book.startedAt = new Date();
+      }
+      await this.bookRepository.save(book);
+    }
+
+    return savedCard;
   }
 
   async updateCard(
