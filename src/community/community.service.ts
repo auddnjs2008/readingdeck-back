@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -12,7 +13,10 @@ import { Deck, DeckStatus } from 'src/deck/entity/deck.entity';
 import { User } from 'src/user/entity/user.entity';
 import { Repository } from 'typeorm';
 import { CreateCommunityPostDto } from './dto/create-community-post.dto';
+import { CreateCommunityCommentDto } from './dto/create-community-comment.dto';
+import { CommunityCommentItemResponseDto } from './dto/get-community-comments-response.dto';
 import { GetCommunityPostsQueryDto } from './dto/get-community-posts-query.dto';
+import { CommunityComment } from './entity/community-comment.entity';
 import {
   CommunityPostDetailResponseDto,
   GetCommunityPostsResponseDto,
@@ -26,6 +30,8 @@ import {
 @Injectable()
 export class CommunityService {
   constructor(
+    @InjectRepository(CommunityComment)
+    private readonly communityCommentRepository: Repository<CommunityComment>,
     @InjectRepository(CommunityPost)
     private readonly communityPostRepository: Repository<CommunityPost>,
     @InjectRepository(Deck)
@@ -244,6 +250,137 @@ export class CommunityService {
     return this.mapCommunityPost(post);
   }
 
+  async getCommunityComments(
+    postId: number,
+  ): Promise<CommunityCommentItemResponseDto[]> {
+    await this.ensureCommunityPostExists(postId);
+
+    const comments = await this.communityCommentRepository.find({
+      where: { postId },
+      relations: { user: true },
+      withDeleted: true,
+      order: { createdAt: 'ASC', id: 'ASC' },
+    });
+
+    const items = comments.map((comment) => this.mapCommunityComment(comment));
+    const repliesByParentId = new Map<
+      number,
+      CommunityCommentItemResponseDto[]
+    >();
+    const roots: CommunityCommentItemResponseDto[] = [];
+
+    items.forEach((item) => {
+      if (item.parentId == null) {
+        roots.push(item);
+        return;
+      }
+
+      const existing = repliesByParentId.get(item.parentId) ?? [];
+      existing.push(item);
+      repliesByParentId.set(item.parentId, existing);
+    });
+
+    roots.forEach((item) => {
+      item.replies = repliesByParentId.get(item.id) ?? [];
+    });
+
+    return roots.sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    );
+  }
+
+  async createCommunityComment(
+    userId: number,
+    postId: number,
+    dto: CreateCommunityCommentDto,
+  ) {
+    const [user, post] = await Promise.all([
+      this.userRepository.findOne({ where: { id: userId } }),
+      this.communityPostRepository.findOne({ where: { id: postId } }),
+    ]);
+
+    if (!user) {
+      throw new NotFoundException('사용자를 찾을 수 없습니다.');
+    }
+
+    if (!post) {
+      throw new NotFoundException('공유된 덱을 찾을 수 없습니다.');
+    }
+
+    let parent: CommunityComment | null = null;
+    if (dto.parentId) {
+      parent = await this.communityCommentRepository.findOne({
+        where: { id: dto.parentId, postId },
+        withDeleted: true,
+      });
+
+      if (!parent) {
+        throw new NotFoundException('답글 대상 댓글을 찾을 수 없습니다.');
+      }
+
+      if (parent.parentId !== null) {
+        throw new BadRequestException(
+          '답글은 한 단계까지만 작성할 수 있습니다.',
+        );
+      }
+    }
+
+    const content = dto.content.trim();
+    if (!content) {
+      throw new BadRequestException('댓글 내용을 입력해 주세요.');
+    }
+
+    const saved = await this.communityCommentRepository.save(
+      this.communityCommentRepository.create({
+        postId,
+        userId,
+        parentId: parent?.id ?? null,
+        content,
+      }),
+    );
+
+    const comment = await this.communityCommentRepository.findOne({
+      where: { id: saved.id },
+      relations: { user: true },
+    });
+
+    if (!comment) {
+      throw new NotFoundException('작성한 댓글을 불러오지 못했습니다.');
+    }
+
+    return this.mapCommunityComment(comment);
+  }
+
+  async deleteCommunityComment(userId: number, commentId: number) {
+    const comment = await this.communityCommentRepository.findOne({
+      where: { id: commentId },
+      withDeleted: true,
+    });
+
+    if (!comment || comment.deletedAt) {
+      throw new NotFoundException('댓글을 찾을 수 없습니다.');
+    }
+
+    if (comment.userId !== userId) {
+      throw new ForbiddenException('본인 댓글만 삭제할 수 있습니다.');
+    }
+
+    comment.content = '';
+    await this.communityCommentRepository.softRemove(comment);
+  }
+
+  private async ensureCommunityPostExists(postId: number) {
+    const post = await this.communityPostRepository.findOne({
+      where: { id: postId },
+      select: { id: true },
+    });
+
+    if (!post) {
+      throw new NotFoundException('공유된 덱을 찾을 수 없습니다.');
+    }
+  }
+
   private mapCommunityPost(item: CommunityPost) {
     return {
       id: item.id,
@@ -265,6 +402,32 @@ export class CommunityService {
         name: item.user.name,
         profile: item.user.profile ?? null,
       },
+    };
+  }
+
+  private mapCommunityComment(
+    item: CommunityComment,
+  ): CommunityCommentItemResponseDto {
+    const isDeleted = Boolean(item.deletedAt);
+
+    return {
+      id: item.id,
+      postId: item.postId,
+      userId: item.userId,
+      parentId: item.parentId ?? null,
+      content: isDeleted ? null : item.content,
+      isDeleted,
+      createdAt: item.createdAt,
+      updatedAt: item.updatedAt,
+      author:
+        isDeleted || !item.user
+          ? null
+          : {
+              id: item.user.id,
+              name: item.user.name,
+              profile: item.user.profile ?? null,
+            },
+      replies: [],
     };
   }
 }

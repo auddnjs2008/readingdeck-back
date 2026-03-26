@@ -12,6 +12,7 @@ import { Book } from './book/entity/book.entity';
 import { Card } from './card/entity/card.entity';
 import { MeModule } from './me/me.module';
 import { CardModule } from './card/card.module';
+import { CommunityComment } from './community/entity/community-comment.entity';
 import { CommunityModule } from './community/community.module';
 import { CommunityPost } from './community/entity/community-post.entity';
 import { Deck } from './deck/entity/deck.entity';
@@ -69,6 +70,7 @@ const getEnvFilePath = () => {
             DeckNode,
             DeckConnection,
             CommunityPost,
+            CommunityComment,
           ],
           synchronize: !isProduction,
         };
