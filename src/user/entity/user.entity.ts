@@ -1,5 +1,6 @@
 import { Book } from 'src/book/entity/book.entity';
 import { BaseTable } from 'src/common/entity/base-table.entity';
+import { CommunityPost } from 'src/community/entity/community-post.entity';
 import { Deck } from 'src/deck/entity/deck.entity';
 import {
   Column,
@@ -41,4 +42,7 @@ export class User extends BaseTable {
 
   @OneToMany(() => Deck, (deck) => deck.user)
   decks: Deck[];
+
+  @OneToMany(() => CommunityPost, (communityPost) => communityPost.user)
+  communityPosts: CommunityPost[];
 }

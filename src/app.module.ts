@@ -12,6 +12,8 @@ import { Book } from './book/entity/book.entity';
 import { Card } from './card/entity/card.entity';
 import { MeModule } from './me/me.module';
 import { CardModule } from './card/card.module';
+import { CommunityModule } from './community/community.module';
+import { CommunityPost } from './community/entity/community-post.entity';
 import { Deck } from './deck/entity/deck.entity';
 import { DeckNode } from './deck-node/entity/deck-node.entity';
 import { DeckConnection } from './deck-connection/entity/deck-connection.entity';
@@ -59,7 +61,15 @@ const getEnvFilePath = () => {
         return {
           type: 'postgres' as const,
           url: databaseUrl,
-          entities: [User, Book, Card, Deck, DeckNode, DeckConnection],
+          entities: [
+            User,
+            Book,
+            Card,
+            Deck,
+            DeckNode,
+            DeckConnection,
+            CommunityPost,
+          ],
           synchronize: !isProduction,
         };
       },
@@ -67,6 +77,7 @@ const getEnvFilePath = () => {
     AuthModule,
     BookModule,
     CardModule,
+    CommunityModule,
     MeModule,
     DeckModule,
   ],
