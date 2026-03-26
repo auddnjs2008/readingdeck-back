@@ -1,5 +1,12 @@
 import { Type } from 'class-transformer';
-import { IsEnum, IsInt, IsOptional, IsString, Min } from 'class-validator';
+import {
+  IsBoolean,
+  IsEnum,
+  IsInt,
+  IsOptional,
+  IsString,
+  Min,
+} from 'class-validator';
 import { DeckMode, DeckStatus } from '../entity/deck.entity';
 
 enum SortType {
@@ -31,6 +38,11 @@ export class GetDecksQueryDto {
   @IsOptional()
   @IsString()
   keyword?: string;
+
+  @IsOptional()
+  @Type(() => Boolean)
+  @IsBoolean()
+  shared?: boolean;
 
   @IsOptional()
   @IsEnum(SortType)

@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Book } from 'src/book/entity/book.entity';
 import { Card } from 'src/card/entity/card.entity';
+import { CommunityPost } from 'src/community/entity/community-post.entity';
 import { DeckConnection } from 'src/deck-connection/entity/deck-connection.entity';
 import { DeckNode } from 'src/deck-node/entity/deck-node.entity';
 import { User } from 'src/user/entity/user.entity';
@@ -18,6 +19,7 @@ import { Deck } from './entity/deck.entity';
       User,
       Book,
       Card,
+      CommunityPost,
     ]),
   ],
   providers: [DeckService],
