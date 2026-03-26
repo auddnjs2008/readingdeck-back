@@ -3,6 +3,8 @@ import { DataSource } from 'typeorm';
 import { User } from 'src/user/entity/user.entity';
 import { Book } from 'src/book/entity/book.entity';
 import { Card } from 'src/card/entity/card.entity';
+import { CommunityComment } from 'src/community/entity/community-comment.entity';
+import { CommunityPost } from 'src/community/entity/community-post.entity';
 import { Deck } from 'src/deck/entity/deck.entity';
 import { DeckNode } from 'src/deck-node/entity/deck-node.entity';
 import { DeckConnection } from 'src/deck-connection/entity/deck-connection.entity';
@@ -19,7 +21,16 @@ dotenv.config({ path: envFilePath });
 export default new DataSource({
   type: 'postgres',
   url: process.env.DATABASE_URL,
-  entities: [User, Book, Card, Deck, DeckNode, DeckConnection],
+  entities: [
+    User,
+    Book,
+    Card,
+    Deck,
+    DeckNode,
+    DeckConnection,
+    CommunityPost,
+    CommunityComment,
+  ],
   migrations: ['src/database/migrations/*.ts'],
   synchronize: false,
 });
