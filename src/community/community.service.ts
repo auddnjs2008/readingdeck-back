@@ -250,6 +250,22 @@ export class CommunityService {
     return this.mapCommunityPost(post);
   }
 
+  async deleteCommunityPost(userId: number, postId: number) {
+    const post = await this.communityPostRepository.findOne({
+      where: { id: postId },
+    });
+
+    if (!post) {
+      throw new NotFoundException('공유된 덱을 찾을 수 없습니다.');
+    }
+
+    if (post.userId !== userId) {
+      throw new ForbiddenException('본인 공유 덱만 내릴 수 있습니다.');
+    }
+
+    await this.communityPostRepository.delete({ id: postId });
+  }
+
   async getCommunityComments(
     postId: number,
   ): Promise<CommunityCommentItemResponseDto[]> {

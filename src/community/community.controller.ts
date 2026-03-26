@@ -1,7 +1,10 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   ParseIntPipe,
   Post,
@@ -30,5 +33,15 @@ export class CommunityController {
   createCommunityPost(@Req() req: any, @Body() dto: CreateCommunityPostDto) {
     const userId = req.user.sub;
     return this.communityService.createCommunityPost(userId, dto);
+  }
+
+  @Delete(':postId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  deleteCommunityPost(
+    @Req() req: any,
+    @Param('postId', ParseIntPipe) postId: number,
+  ) {
+    const userId = req.user.sub;
+    return this.communityService.deleteCommunityPost(userId, postId);
   }
 }

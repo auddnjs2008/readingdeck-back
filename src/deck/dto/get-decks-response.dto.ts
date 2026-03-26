@@ -6,6 +6,7 @@ export class DeckListItemResponseDto {
   description: string | null;
   status: DeckStatus;
   mode: DeckMode;
+  isShared: boolean;
   createdAt: Date;
   updatedAt: Date;
   preview: DeckPreview | null;

@@ -7,6 +7,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Book } from 'src/book/entity/book.entity';
 import { Card } from 'src/card/entity/card.entity';
+import { CommunityPost } from 'src/community/entity/community-post.entity';
 import { DeckConnection } from 'src/deck-connection/entity/deck-connection.entity';
 import { DeckNode, DeckNodeType } from 'src/deck-node/entity/deck-node.entity';
 import { User } from 'src/user/entity/user.entity';
@@ -26,6 +27,7 @@ type DeckListRawRow = {
   description: string | null;
   status: DeckStatus;
   mode: DeckMode;
+  isShared: boolean | string;
   createdAt: Date | string;
   updatedAt: Date | string;
   preview: Deck['preview'];
@@ -49,6 +51,8 @@ export class DeckService {
     private readonly bookRepository: Repository<Book>,
     @InjectRepository(Card)
     private readonly cardRepository: Repository<Card>,
+    @InjectRepository(CommunityPost)
+    private readonly communityPostRepository: Repository<CommunityPost>,
     private readonly s3Service: S3Service,
     private readonly dataSource: DataSource,
   ) {}
@@ -86,6 +90,17 @@ export class DeckService {
       });
     }
 
+    if (dto.shared === true) {
+      qb.andWhere(
+        `EXISTS (${qb
+          .subQuery()
+          .select('1')
+          .from(CommunityPost, 'communityPost')
+          .where('communityPost.deckId = deck.id')
+          .getQuery()})`,
+      );
+    }
+
     const total = await qb.clone().getCount();
 
     const rows = await qb
@@ -94,6 +109,16 @@ export class DeckService {
       .addSelect('deck.description', 'description')
       .addSelect('deck.status', 'status')
       .addSelect('deck.mode', 'mode')
+      .addSelect(
+        `EXISTS (${this.deckRepository
+          .createQueryBuilder()
+          .subQuery()
+          .select('1')
+          .from(CommunityPost, 'communityPost')
+          .where('communityPost.deckId = deck.id')
+          .getQuery()})`,
+        'isShared',
+      )
       .addSelect('deck.createdAt', 'createdAt')
       .addSelect('deck.updatedAt', 'updatedAt')
       .addSelect('deck.preview', 'preview')
@@ -138,6 +163,10 @@ export class DeckService {
         description: row.description ?? null,
         status: row.status,
         mode: row.mode,
+        isShared:
+          typeof row.isShared === 'boolean'
+            ? row.isShared
+            : row.isShared === 'true',
         createdAt,
         updatedAt,
         preview: row.preview ?? null,
@@ -232,7 +261,7 @@ export class DeckService {
   async getDeck(userId: number, deckId: number) {
     const deck = await this.findOwnedDeck(userId, deckId);
 
-    const [nodes, connections] = await Promise.all([
+    const [nodes, connections, sharedPost] = await Promise.all([
       this.deckNodeRepository
         .createQueryBuilder('node')
         .leftJoinAndSelect('node.book', 'book')
@@ -286,6 +315,10 @@ export class DeckService {
         where: { deckId },
         order: { id: 'ASC' },
       }),
+      this.communityPostRepository.findOne({
+        where: { deckId },
+        select: { id: true },
+      }),
     ]);
 
     const normalizedNodes = nodes.map((node) => {
@@ -330,6 +363,8 @@ export class DeckService {
 
     return {
       ...deck,
+      isShared: Boolean(sharedPost?.id),
+      sharedPostId: sharedPost?.id ?? null,
       nodes: normalizedNodes,
       connections,
     };
