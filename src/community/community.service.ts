@@ -416,7 +416,7 @@ export class CommunityService {
       author: {
         id: item.user.id,
         name: item.user.name,
-        profile: item.user.profile ?? null,
+        profile: this.s3Service.resolvePublicUrl(item.user.profile),
       },
     };
   }
@@ -441,7 +441,7 @@ export class CommunityService {
           : {
               id: item.user.id,
               name: item.user.name,
-              profile: item.user.profile ?? null,
+              profile: this.s3Service.resolvePublicUrl(item.user.profile),
             },
       replies: [],
     };

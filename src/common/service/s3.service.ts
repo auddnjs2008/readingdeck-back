@@ -29,8 +29,8 @@ export class S3Service {
       `https://${this.bucket}.s3.${this.region}.amazonaws.com`;
   }
 
-  async uploadImage(file: Express.Multer.File) {
-    const key = `books/${uuid()}-${file.originalname}`;
+  async uploadImage(file: Express.Multer.File, directory = 'books') {
+    const key = `${directory}/${uuid()}-${file.originalname}`;
 
     await this.s3.send(
       new PutObjectCommand({
@@ -44,7 +44,7 @@ export class S3Service {
     return key;
   }
 
-  async uploadImageByUrl(url: string) {
+  async uploadImageByUrl(url: string, directory = 'books') {
     const response$ = this.httpService.get(url, {
       responseType: 'arraybuffer',
     });
@@ -53,7 +53,7 @@ export class S3Service {
     const buffer = Buffer.from(response.data);
     const contentType = response.headers['content-type'] ?? 'image/jpeg';
 
-    const key = `books/${Date.now()}-${Math.random()
+    const key = `${directory}/${Date.now()}-${Math.random()
       .toString(36)
       .slice(2)}.jpg`;
 

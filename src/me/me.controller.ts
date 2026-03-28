@@ -1,5 +1,15 @@
-import { Controller, Get, Req } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Patch,
+  Req,
+  UploadedFile,
+  UseInterceptors,
+} from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { MeService } from './me.service';
+import { UpdateMyProfileDto } from './dto/update-my-profile.dto';
 
 @Controller('me')
 export class MeController {
@@ -7,8 +17,19 @@ export class MeController {
 
   @Get()
   async getMyProfile(@Req() req: any) {
-    const userId = req.user.id;
+    const userId = req.user.sub;
     return this.MeService.getMyProfile(userId);
+  }
+
+  @Patch()
+  @UseInterceptors(FileInterceptor('profileImage'))
+  async updateMyProfile(
+    @Req() req: any,
+    @Body() dto: UpdateMyProfileDto,
+    @UploadedFile() file?: Express.Multer.File,
+  ) {
+    const userId = req.user.sub;
+    return this.MeService.updateMyProfile(userId, dto, file);
   }
 
   @Get('library-stats')
