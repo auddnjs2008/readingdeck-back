@@ -2,6 +2,10 @@ import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { v4 as uuid } from 'uuid';
+import {
+  type UploadAssetContext,
+  UploadAssetType,
+} from '../const/upload-path.const';
 import { envVariableKeys } from '../const/env.const';
 import { HttpService } from '@nestjs/axios';
 import { lastValueFrom } from 'rxjs';
@@ -29,8 +33,60 @@ export class S3Service {
       `https://${this.bucket}.s3.${this.region}.amazonaws.com`;
   }
 
-  async uploadImage(file: Express.Multer.File, directory = 'books') {
-    const key = `${directory}/${uuid()}-${file.originalname}`;
+  private getExtensionFromFilename(filename?: string | null) {
+    const extension = filename?.split('.').pop()?.trim().toLowerCase();
+    return extension ? extension.replace(/[^a-z0-9]/g, '') : null;
+  }
+
+  private getExtensionFromMimeType(mimeType?: string | null) {
+    if (!mimeType) return null;
+
+    const [type, subtype] = mimeType.toLowerCase().split('/');
+    if (type !== 'image' || !subtype) return null;
+
+    if (subtype === 'jpeg') return 'jpg';
+    if (subtype.includes('svg')) return 'svg';
+    if (subtype.includes('png')) return 'png';
+    if (subtype.includes('webp')) return 'webp';
+    if (subtype.includes('gif')) return 'gif';
+    if (subtype.includes('avif')) return 'avif';
+
+    return subtype.replace(/[^a-z0-9]/g, '');
+  }
+
+  private getExtensionFromUrl(url?: string | null) {
+    if (!url) return null;
+
+    const sanitizedUrl = url.split('?')[0].split('#')[0];
+    return this.getExtensionFromFilename(sanitizedUrl);
+  }
+
+  private resolveAssetDirectory(context: UploadAssetContext) {
+    switch (context.type) {
+      case UploadAssetType.PROFILE_AVATAR:
+        return `profiles/${context.userId ?? 'unknown'}/avatar`;
+      case UploadAssetType.BOOK_COVER_UPLOAD:
+        return `books/${context.userId ?? 'unknown'}/cover`;
+      default:
+        return 'uploads/misc';
+    }
+  }
+
+  private buildAssetKey(
+    context: UploadAssetContext,
+    extension?: string | null,
+  ) {
+    const directory = this.resolveAssetDirectory(context);
+    const safeExtension = extension ? `.${extension}` : '';
+    return `${directory}/${uuid()}${safeExtension}`;
+  }
+
+  async uploadImage(file: Express.Multer.File, context: UploadAssetContext) {
+    const extension =
+      this.getExtensionFromFilename(file.originalname) ??
+      this.getExtensionFromMimeType(file.mimetype) ??
+      'jpg';
+    const key = this.buildAssetKey(context, extension);
 
     await this.s3.send(
       new PutObjectCommand({
@@ -44,7 +100,7 @@ export class S3Service {
     return key;
   }
 
-  async uploadImageByUrl(url: string, directory = 'books') {
+  async uploadImageByUrl(url: string, context: UploadAssetContext) {
     const response$ = this.httpService.get(url, {
       responseType: 'arraybuffer',
     });
@@ -52,10 +108,11 @@ export class S3Service {
 
     const buffer = Buffer.from(response.data);
     const contentType = response.headers['content-type'] ?? 'image/jpeg';
-
-    const key = `${directory}/${Date.now()}-${Math.random()
-      .toString(36)
-      .slice(2)}.jpg`;
+    const extension =
+      this.getExtensionFromMimeType(contentType) ??
+      this.getExtensionFromUrl(url) ??
+      'jpg';
+    const key = this.buildAssetKey(context, extension);
 
     await this.s3.send(
       new PutObjectCommand({
