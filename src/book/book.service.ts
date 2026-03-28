@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { UploadAssetType } from 'src/common/const/upload-path.const';
 import { Book } from './entity/book.entity';
 import { In, Repository } from 'typeorm';
 import { CreateBookDto } from './dto/create-book.dto';
@@ -40,12 +41,18 @@ export class BookService {
     };
   }
 
-  private calculateProgressPercent(currentPage?: number | null, totalPages?: number | null) {
+  private calculateProgressPercent(
+    currentPage?: number | null,
+    totalPages?: number | null,
+  ) {
     if (!currentPage || !totalPages || totalPages <= 0) {
       return 0;
     }
 
-    return Math.max(0, Math.min(100, Math.round((currentPage / totalPages) * 100)));
+    return Math.max(
+      0,
+      Math.min(100, Math.round((currentPage / totalPages) * 100)),
+    );
   }
 
   private mapBookResponse<
@@ -89,9 +96,7 @@ export class BookService {
       if (sort === BookSortType.RECENT_CARD) {
         orderQb
           .select('book.id', 'id')
-          .andWhere(
-            'EXISTS (SELECT 1 FROM card c WHERE c."bookId" = book.id)',
-          )
+          .andWhere('EXISTS (SELECT 1 FROM card c WHERE c."bookId" = book.id)')
           .orderBy(
             '(SELECT MAX(c."createdAt") FROM card c WHERE c."bookId" = book.id)',
             'DESC',
@@ -155,11 +160,10 @@ export class BookService {
       .loadRelationCountAndMap('book.cardCount', 'book.cards');
     qb.andWhere('book.userId = :userId', { userId });
     applyKeyword(qb);
-    qb
-      .orderBy(
-        sort === BookSortType.UPDATED_AT ? 'book.updatedAt' : 'book.createdAt',
-        'DESC',
-      )
+    qb.orderBy(
+      sort === BookSortType.UPDATED_AT ? 'book.updatedAt' : 'book.createdAt',
+      'DESC',
+    )
       .skip(skip)
       .take(take);
     const items = await qb.getMany();
@@ -210,11 +214,14 @@ export class BookService {
     }
 
     if (file) {
-      backgroundImage = await this.s3Service.uploadImage(file);
+      backgroundImage = await this.s3Service.uploadImage(file, {
+        type: UploadAssetType.BOOK_COVER_UPLOAD,
+        userId,
+      });
     } else if (createBookDto.imageUrl) {
-      backgroundImage = await this.s3Service.uploadImageByUrl(
-        createBookDto.imageUrl,
-      );
+      // External search covers stay as source URLs for now to avoid
+      // duplicating the same public image into S3 on every book creation.
+      backgroundImage = createBookDto.imageUrl;
     }
 
     const book = this.bookRepository.create({
@@ -228,8 +235,8 @@ export class BookService {
       totalPages: createBookDto.totalPages ?? null,
       startedAt: createBookDto.startedAt
         ? new Date(createBookDto.startedAt)
-        : (createBookDto.status === BookStatus.READING ||
-            (createBookDto.currentPage ?? 0) > 0)
+        : createBookDto.status === BookStatus.READING ||
+            (createBookDto.currentPage ?? 0) > 0
           ? new Date()
           : null,
       finishedAt: createBookDto.finishedAt
@@ -244,7 +251,11 @@ export class BookService {
     return this.mapBookResponse(savedBook);
   }
 
-  async updateBook(userId: number, bookId: number, updateBookDto: UpdateBookDto) {
+  async updateBook(
+    userId: number,
+    bookId: number,
+    updateBookDto: UpdateBookDto,
+  ) {
     const book = await this.findOwnedBook(userId, bookId);
 
     if (updateBookDto.status !== undefined) {
@@ -267,10 +278,7 @@ export class BookService {
       book.currentPage = book.totalPages;
     }
 
-    if (
-      book.status === BookStatus.FINISHED &&
-      book.totalPages != null
-    ) {
+    if (book.status === BookStatus.FINISHED && book.totalPages != null) {
       book.currentPage = book.totalPages;
     }
 

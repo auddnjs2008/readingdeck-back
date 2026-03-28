@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Book, BookStatus } from 'src/book/entity/book.entity';
 import { Card } from 'src/card/entity/card.entity';
+import { UploadAssetType } from 'src/common/const/upload-path.const';
 import { S3Service } from 'src/common/service/s3.service';
 import { DeckNode } from 'src/deck-node/entity/deck-node.entity';
 import { User } from 'src/user/entity/user.entity';
@@ -163,7 +164,10 @@ export class MeService {
     }
 
     if (file) {
-      user.profile = await this.s3Service.uploadImage(file, 'profiles');
+      user.profile = await this.s3Service.uploadImage(file, {
+        type: UploadAssetType.PROFILE_AVATAR,
+        userId,
+      });
     }
 
     await this.userRepository.save(user);
