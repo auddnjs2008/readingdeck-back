@@ -6,6 +6,7 @@ import { S3Service } from 'src/common/service/s3.service';
 import { DeckNode } from 'src/deck-node/entity/deck-node.entity';
 import { User } from 'src/user/entity/user.entity';
 import { Between, In, Repository } from 'typeorm';
+import { UpdateMyProfileDto } from './dto/update-my-profile.dto';
 
 @Injectable()
 export class MeService {
@@ -141,8 +142,37 @@ export class MeService {
     return {
       name: user.name,
       email: user.email,
-      profile: user.profile,
+      profile: this.s3Service.resolvePublicUrl(user.profile),
       id: user.id,
+    };
+  }
+
+  async updateMyProfile(
+    userId: number,
+    dto: UpdateMyProfileDto,
+    file?: Express.Multer.File,
+  ) {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('해당 유저가 존재하지 않습니다.');
+    }
+
+    const nextName = dto.name?.trim();
+    if (nextName) {
+      user.name = nextName;
+    }
+
+    if (file) {
+      user.profile = await this.s3Service.uploadImage(file, 'profiles');
+    }
+
+    await this.userRepository.save(user);
+
+    return {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      profile: this.s3Service.resolvePublicUrl(user.profile),
     };
   }
 
@@ -312,7 +342,9 @@ export class MeService {
         ? await this.cardRepository
             .createQueryBuilder('card')
             .leftJoinAndSelect('card.book', 'book')
-            .where('card.bookId IN (:...bookIds)', { bookIds: suggestionBookIds })
+            .where('card.bookId IN (:...bookIds)', {
+              bookIds: suggestionBookIds,
+            })
             .andWhere(`NOT EXISTS (${undeckedCardSubquery.getQuery()})`)
             .setParameters(undeckedCardSubquery.getParameters())
             .orderBy('card.createdAt', 'DESC')
