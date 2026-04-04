@@ -20,6 +20,8 @@ import { DeckNode } from './deck-node/entity/deck-node.entity';
 import { DeckConnection } from './deck-connection/entity/deck-connection.entity';
 import { DeckModule } from './deck/deck.module';
 import { CommonModule } from './common/common.module';
+import { Feedback } from './feedback/entity/feedback.entity';
+import { FeedbackModule } from './feedback/feedback.module';
 
 const getEnvFilePath = () => {
   switch (process.env.ENV) {
@@ -71,6 +73,7 @@ const getEnvFilePath = () => {
             DeckConnection,
             CommunityPost,
             CommunityComment,
+            Feedback,
           ],
           synchronize: !isProduction,
         };
@@ -82,6 +85,7 @@ const getEnvFilePath = () => {
     CommunityModule,
     MeModule,
     DeckModule,
+    FeedbackModule,
   ],
   controllers: [],
   providers: [
