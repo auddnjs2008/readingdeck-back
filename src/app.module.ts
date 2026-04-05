@@ -25,6 +25,7 @@ import { FeedbackModule } from './feedback/feedback.module';
 import { CardEmbedding } from './card-embedding/entity/card-embedding.entity';
 import { EmbeddingModule } from './embedding/embedding.module';
 import { CardEmbeddingModule } from './card-embedding/card-embedding.module';
+import { AiModule } from './ai/ai.module';
 
 const getEnvFilePath = () => {
   switch (process.env.ENV) {
@@ -93,6 +94,7 @@ const getEnvFilePath = () => {
     FeedbackModule,
     EmbeddingModule,
     CardEmbeddingModule,
+    AiModule,
   ],
   controllers: [],
   providers: [

@@ -123,4 +123,33 @@ export class CardEmbeddingService {
   private toVectorLiteral(values: number[]) {
     return `[${values.join(',')}]`;
   }
+
+  async getCardsByIds(cardIds: number[]) {
+    if (cardIds.length === 0) {
+      return [];
+    }
+
+    const cards = await this.cardRepository.find({
+      where: cardIds.map((id) => ({ id })),
+      relations: {
+        book: true,
+      },
+    });
+
+    const cardMap = new Map(cards.map((card) => [card.id, card]));
+
+    return cardIds
+      .map((id) => cardMap.get(id))
+      .filter((card): card is Card => Boolean(card))
+      .map((card) => ({
+        cardId: card.id,
+        type: card.type,
+        thought: card.thought,
+        quote: card.quote ?? null,
+        bookTitle: card.book.title,
+        author: card.book.author,
+        pageStart: card.pageStart ?? null,
+        pageEnd: card.pageEnd ?? null,
+      }));
+  }
 }
