@@ -85,4 +85,42 @@ export class CardEmbeddingService {
 
     return parts.join('\n');
   }
+
+  async searchRelevantCards(userId: number, query: string, limit = 5) {
+    const trimmedQuery = query.trim();
+
+    if (!trimmedQuery) {
+      return [];
+    }
+    const queryEmbedding = await this.embeddingService.embedText(trimmedQuery);
+    const vectorLiteral = this.toVectorLiteral(queryEmbedding);
+
+    const rows = await this.cardEmbeddingRepository.query(
+      `
+        SELECT
+          ce."cardId",
+          ce."bookId",
+          ce."content",
+          ce."embeddingModel",
+          ce.embedding <=> $2::vector AS distance
+        FROM "card_embedding" ce
+        WHERE ce."userId" = $1
+        ORDER BY ce.embedding <=> $2::vector ASC
+        LIMIT $3
+      `,
+      [userId, vectorLiteral, limit],
+    );
+
+    return rows.map((row: any) => ({
+      cardId: Number(row.cardId),
+      bookId: row.bookId != null ? Number(row.bookId) : null,
+      content: row.content,
+      embeddingModel: row.embeddingModel,
+      distance: Number(row.distance),
+    }));
+  }
+
+  private toVectorLiteral(values: number[]) {
+    return `[${values.join(',')}]`;
+  }
 }
