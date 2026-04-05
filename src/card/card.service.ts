@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { GetTodayCardsQueryDto } from './dto/get-today-cards-query.dto';
@@ -22,6 +23,7 @@ import { CardEmbeddingService } from 'src/card-embedding/card-embedding.service'
 
 @Injectable()
 export class CardService {
+  private readonly logger = new Logger(CardService.name);
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
@@ -244,10 +246,11 @@ export class CardService {
     try {
       await this.cardEmbeddingService.upsertForCard(savedCard.id);
     } catch (error) {
-      console.error('Card embedding sync failed', {
-        cardId: savedCard.id,
-        error,
-      });
+      this.logger.error(
+        `Card embedding sync failed after create:
+    cardId=${savedCard.id}`,
+        error instanceof Error ? error.stack : String(error),
+      );
     }
 
     if (book.status === BookStatus.PAUSED) {
@@ -307,10 +310,11 @@ export class CardService {
     try {
       await this.cardEmbeddingService.upsertForCard(updatedCard.id);
     } catch (error) {
-      console.error('Card embedding sync failed', {
-        cardId: updatedCard.id,
-        error,
-      });
+      this.logger.error(
+        `Card embedding sync failed after update:
+    cardId=${updatedCard.id}`,
+        error instanceof Error ? error.stack : String(error),
+      );
     }
     return updatedCard;
   }
@@ -331,10 +335,10 @@ export class CardService {
     try {
       await this.cardEmbeddingService.removeForCard(card.id);
     } catch (error) {
-      console.error('Card embedding delete failed', {
-        cardId: card.id,
-        error,
-      });
+      this.logger.error(
+        `Card embedding delete failed: cardId=${card.id}`,
+        error instanceof Error ? error.stack : String(error),
+      );
     }
   }
 
