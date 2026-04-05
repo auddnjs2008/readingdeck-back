@@ -18,6 +18,7 @@ import {
 import { UpdateCardDto } from './dto/update-card.dto';
 import { S3Service } from 'src/common/service/s3.service';
 import { BookStatus } from 'src/book/entity/book.entity';
+import { CardEmbeddingService } from 'src/card-embedding/card-embedding.service';
 
 @Injectable()
 export class CardService {
@@ -29,6 +30,7 @@ export class CardService {
     @InjectRepository(Card)
     private readonly cardRepository: Repository<Card>,
     private readonly s3Service: S3Service,
+    private readonly cardEmbeddingService: CardEmbeddingService,
   ) {}
 
   private mapCardBookImage<
@@ -239,6 +241,14 @@ export class CardService {
     });
 
     const savedCard = await this.cardRepository.save(card);
+    try {
+      await this.cardEmbeddingService.upsertForCard(savedCard.id);
+    } catch (error) {
+      console.error('Card embedding sync failed', {
+        cardId: savedCard.id,
+        error,
+      });
+    }
 
     if (book.status === BookStatus.PAUSED) {
       book.status = BookStatus.READING;
@@ -293,7 +303,16 @@ export class CardService {
       card.pageEnd = updateCardDto.pageEnd;
     }
 
-    return this.cardRepository.save(card);
+    const updatedCard = await this.cardRepository.save(card);
+    try {
+      await this.cardEmbeddingService.upsertForCard(updatedCard.id);
+    } catch (error) {
+      console.error('Card embedding sync failed', {
+        cardId: updatedCard.id,
+        error,
+      });
+    }
+    return updatedCard;
   }
 
   async revisitCard(userId: number, cardId: number) {
@@ -309,6 +328,14 @@ export class CardService {
     const card = await this.findOwnedCard(userId, cardId);
 
     await this.cardRepository.delete({ id: card.id });
+    try {
+      await this.cardEmbeddingService.removeForCard(card.id);
+    } catch (error) {
+      console.error('Card embedding delete failed', {
+        cardId: card.id,
+        error,
+      });
+    }
   }
 
   private async findOwnedCard(userId: number, cardId: number) {

@@ -22,6 +22,9 @@ import { DeckModule } from './deck/deck.module';
 import { CommonModule } from './common/common.module';
 import { Feedback } from './feedback/entity/feedback.entity';
 import { FeedbackModule } from './feedback/feedback.module';
+import { CardEmbedding } from './card-embedding/entity/card-embedding.entity';
+import { EmbeddingModule } from './embedding/embedding.module';
+import { CardEmbeddingModule } from './card-embedding/card-embedding.module';
 
 const getEnvFilePath = () => {
   switch (process.env.ENV) {
@@ -50,6 +53,7 @@ const getEnvFilePath = () => {
         ACCESS_TOKEN_SECRET: Joi.string().required(),
         REFRESH_TOKEN_SECRET: Joi.string().required(),
         FRONT_LOGIN_REDIRECT_URL: Joi.string().required(),
+        OPENAI_API_KEY: Joi.string().required(),
       }),
     }),
     TypeOrmModule.forRootAsync({
@@ -74,6 +78,7 @@ const getEnvFilePath = () => {
             CommunityPost,
             CommunityComment,
             Feedback,
+            CardEmbedding,
           ],
           synchronize: !isProduction,
         };
@@ -86,6 +91,8 @@ const getEnvFilePath = () => {
     MeModule,
     DeckModule,
     FeedbackModule,
+    EmbeddingModule,
+    CardEmbeddingModule,
   ],
   controllers: [],
   providers: [

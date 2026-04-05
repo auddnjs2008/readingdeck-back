@@ -6,11 +6,15 @@ import { User } from 'src/user/entity/user.entity';
 import { Book } from './entity/book.entity';
 import { Card } from 'src/card/entity/card.entity';
 import { KakaoModule } from 'src/integrations/kakao/kakao.module';
-import { CardService } from 'src/card/card.service';
+import { CardModule } from 'src/card/card.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([User, Book, Card]), KakaoModule],
-  providers: [BookService, CardService],
+  imports: [
+    TypeOrmModule.forFeature([User, Book, Card]),
+    KakaoModule,
+    CardModule,
+  ],
+  providers: [BookService],
   controllers: [BookController],
 })
 export class BookModule {}

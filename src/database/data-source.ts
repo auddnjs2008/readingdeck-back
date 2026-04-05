@@ -9,6 +9,7 @@ import { Deck } from 'src/deck/entity/deck.entity';
 import { DeckNode } from 'src/deck-node/entity/deck-node.entity';
 import { DeckConnection } from 'src/deck-connection/entity/deck-connection.entity';
 import { Feedback } from 'src/feedback/entity/feedback.entity';
+import { CardEmbedding } from 'src/card-embedding/entity/card-embedding.entity';
 
 const envFilePath =
   process.env.ENV === 'prod'
@@ -32,6 +33,7 @@ export default new DataSource({
     CommunityPost,
     CommunityComment,
     Feedback,
+    CardEmbedding,
   ],
   migrations: ['src/database/migrations/*.ts'],
   synchronize: false,

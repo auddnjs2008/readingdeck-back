@@ -46,6 +46,7 @@
     "cookie-parser": "^1.4.7",
     "dotenv": "^17.3.1",
     "joi": "^18.0.2",
+    "openai": "^6.33.0",
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",
     "pg": "^8.17.1",
