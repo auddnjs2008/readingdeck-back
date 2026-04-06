@@ -63,17 +63,34 @@ export class CardEmbeddingService {
   }
 
   private buildEmbeddingContent(card: Card) {
+    const typeLabelMap: Record<Card['type'], string> = {
+      insight: '인사이트',
+      change: '변화',
+      action: '실천',
+      question: '질문',
+    };
+
+    const normalizeText = (value?: string | null) =>
+      value?.replace(/\s+/g, ' ').trim() ?? '';
+
+    const normalizedThought = normalizeText(card.thought);
+    const normalizedQuote = normalizeText(card.quote);
+    const truncatedQuote =
+      normalizedQuote && normalizedQuote.length > 280
+        ? `${normalizedQuote.slice(0, 280)}...`
+        : normalizedQuote;
+    const typeLabel = typeLabelMap[card.type];
+
     const parts = [
+      `생각 메모: ${normalizedThought}`,
+      `카드 유형: ${typeLabel} (${card.type})`,
       `책 제목: ${card.book.title}`,
       `저자: ${card.book.author}`,
-      `카드 유형: ${card.type}`,
     ];
 
-    if (card.quote?.trim()) {
-      parts.push(`인용: ${card.quote.trim()}`);
+    if (truncatedQuote) {
+      parts.push(`인용 문장: ${truncatedQuote}`);
     }
-
-    parts.push(`생각: ${card.thought.trim()}`);
 
     if (card.pageStart != null && card.pageEnd != null) {
       parts.push(`페이지: ${card.pageStart}-${card.pageEnd}`);
