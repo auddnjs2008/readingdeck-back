@@ -27,6 +27,8 @@ import { EmbeddingModule } from './embedding/embedding.module';
 import { CardEmbeddingModule } from './card-embedding/card-embedding.module';
 import { AiModule } from './ai/ai.module';
 import { AiChatUsage } from './ai/entity/ai-chat-usage.entity';
+import { AiChatThread } from './ai/entity/ai-chat-thread.entity';
+import { AiChatMessage } from './ai/entity/ai-chat-message.entity';
 
 const getEnvFilePath = () => {
   switch (process.env.ENV) {
@@ -82,6 +84,8 @@ const getEnvFilePath = () => {
             Feedback,
             CardEmbedding,
             AiChatUsage,
+            AiChatThread,
+            AiChatMessage,
           ],
           synchronize: !isProduction,
         };

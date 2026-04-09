@@ -8,4 +8,8 @@ export class ChatDto {
   @IsInt()
   @Min(1)
   limit?: number;
+
+  @IsOptional()
+  @IsString()
+  threadId?: string;
 }

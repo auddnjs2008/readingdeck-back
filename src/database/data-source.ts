@@ -11,6 +11,8 @@ import { DeckConnection } from 'src/deck-connection/entity/deck-connection.entit
 import { Feedback } from 'src/feedback/entity/feedback.entity';
 import { CardEmbedding } from 'src/card-embedding/entity/card-embedding.entity';
 import { AiChatUsage } from 'src/ai/entity/ai-chat-usage.entity';
+import { AiChatThread } from 'src/ai/entity/ai-chat-thread.entity';
+import { AiChatMessage } from 'src/ai/entity/ai-chat-message.entity';
 
 const envFilePath =
   process.env.ENV === 'prod'
@@ -36,6 +38,8 @@ export default new DataSource({
     Feedback,
     CardEmbedding,
     AiChatUsage,
+    AiChatThread,
+    AiChatMessage,
   ],
   migrations: ['src/database/migrations/*.ts'],
   synchronize: false,
