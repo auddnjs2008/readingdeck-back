@@ -29,6 +29,7 @@ import { AiModule } from './ai/ai.module';
 import { AiChatUsage } from './ai/entity/ai-chat-usage.entity';
 import { AiChatThread } from './ai/entity/ai-chat-thread.entity';
 import { AiChatMessage } from './ai/entity/ai-chat-message.entity';
+import { AiHelpDocument } from './ai/entity/ai-help-document.entity';
 
 const getEnvFilePath = () => {
   switch (process.env.ENV) {
@@ -86,6 +87,7 @@ const getEnvFilePath = () => {
             AiChatUsage,
             AiChatThread,
             AiChatMessage,
+            AiHelpDocument,
           ],
           synchronize: !isProduction,
         };

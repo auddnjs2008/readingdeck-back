@@ -13,6 +13,7 @@ import { CardEmbedding } from 'src/card-embedding/entity/card-embedding.entity';
 import { AiChatUsage } from 'src/ai/entity/ai-chat-usage.entity';
 import { AiChatThread } from 'src/ai/entity/ai-chat-thread.entity';
 import { AiChatMessage } from 'src/ai/entity/ai-chat-message.entity';
+import { AiHelpDocument } from 'src/ai/entity/ai-help-document.entity';
 
 const envFilePath =
   process.env.ENV === 'prod'
@@ -40,6 +41,7 @@ export default new DataSource({
     AiChatUsage,
     AiChatThread,
     AiChatMessage,
+    AiHelpDocument,
   ],
   migrations: ['src/database/migrations/*.ts'],
   synchronize: false,
