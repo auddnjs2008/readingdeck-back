@@ -27,6 +27,9 @@ export class Card extends BaseTable {
   @Column({ type: 'text', nullable: true })
   quote?: string;
 
+  @Column({ type: 'varchar', nullable: true })
+  title?: string | null;
+
   @Column({ type: 'text' })
   thought: string;
 

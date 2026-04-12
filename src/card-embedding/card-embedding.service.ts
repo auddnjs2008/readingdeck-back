@@ -82,6 +82,7 @@ export class CardEmbeddingService {
     const typeLabel = typeLabelMap[card.type];
 
     const parts = [
+      ...(card.title?.trim() ? [`카드 제목: ${normalizeText(card.title)}`] : []),
       `생각 메모: ${normalizedThought}`,
       `카드 유형: ${typeLabel} (${card.type})`,
       `책 제목: ${card.book.title}`,

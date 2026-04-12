@@ -14,6 +14,10 @@ export class CreateCardDto {
   @IsEnum(CardType)
   type: CardType;
 
+  @IsOptional()
+  @IsString()
+  title?: string;
+
   @IsString()
   @IsOptional()
   quote?: string;

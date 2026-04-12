@@ -9,6 +9,10 @@ export class UpdateCardDto {
 
   @IsOptional()
   @IsString()
+  title?: string;
+
+  @IsOptional()
+  @IsString()
   quote?: string;
 
   @IsOptional()

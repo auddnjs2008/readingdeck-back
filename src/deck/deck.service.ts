@@ -293,6 +293,7 @@ export class DeckService {
           'book.version',
           'card.id',
           'card.type',
+          'card.title',
           'card.quote',
           'card.thought',
           'card.backgroundImage',
@@ -346,6 +347,7 @@ export class DeckService {
           ? {
               id: node.card.id,
               type: node.card.type,
+              title: node.card.title ?? null,
               quote: node.card.quote ?? null,
               thought: node.card.thought,
               backgroundImage: this.s3Service.resolvePublicUrl(
@@ -627,6 +629,7 @@ export class DeckService {
       .select([
         'card.id',
         'card.type',
+        'card.title',
         'card.thought',
         'book.id',
         'book.title',
@@ -647,7 +650,8 @@ export class DeckService {
       const card = cardById.get(node.cardId);
       if (!card) return acc;
 
-      const normalizedTitle = card.thought?.trim() || `Card #${card.id}`;
+      const normalizedTitle =
+        card.title?.trim() || card.thought?.trim() || `Card #${card.id}`;
       const truncatedTitle =
         normalizedTitle.length > 40
           ? `${normalizedTitle.slice(0, 40)}...`

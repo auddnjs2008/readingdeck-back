@@ -92,6 +92,7 @@ export class CardService {
     return this.mapCardBookImage({
       id: card.id,
       type: card.type,
+      title: card.title ?? null,
       quote: card.quote,
       thought: card.thought,
       backgroundImage: card.backgroundImage,
@@ -218,6 +219,7 @@ export class CardService {
       throw new ForbiddenException('이 책에 카드를 추가할 권한이 없습니다.');
     }
 
+    const title = createCardDto.title?.trim() || null;
     const thought = createCardDto.thought.trim();
     const quote = createCardDto.quote?.trim() || undefined;
 
@@ -237,6 +239,7 @@ export class CardService {
 
     const card = this.cardRepository.create({
       ...createCardDto,
+      title,
       thought,
       quote,
       book: { id: bookId },
@@ -293,11 +296,14 @@ export class CardService {
     if (updateCardDto.type !== undefined) {
       card.type = updateCardDto.type;
     }
+    if (updateCardDto.title !== undefined) {
+      card.title = updateCardDto.title.trim() || null;
+    }
     if (updateCardDto.quote !== undefined) {
-      card.quote = updateCardDto.quote;
+      card.quote = updateCardDto.quote.trim() || null;
     }
     if (updateCardDto.thought !== undefined) {
-      card.thought = updateCardDto.thought;
+      card.thought = updateCardDto.thought.trim();
     }
     if (updateCardDto.pageStart !== undefined) {
       card.pageStart = updateCardDto.pageStart;
