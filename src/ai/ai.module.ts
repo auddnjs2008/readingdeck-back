@@ -10,6 +10,7 @@ import { AiChatMessage } from './entity/ai-chat-message.entity';
 import { AiHelpDocument } from './entity/ai-help-document.entity';
 import { EmbeddingModule } from 'src/embedding/embedding.module';
 import { AiHelpDocumentSyncService } from './ai-help-document-sync.service';
+import { AiHelpDocumentService } from './ai-help-document.service';
 
 @Module({
   imports: [
@@ -26,9 +27,9 @@ import { AiHelpDocumentSyncService } from './ai-help-document-sync.service';
   providers: [
     AiService,
     AiChatUsageService,
-    AiHelpDocumentSyncService,
+    AiHelpDocumentService,
     AiHelpDocumentSyncService,
   ],
-  exports: [AiHelpDocumentSyncService],
+  exports: [AiHelpDocumentSyncService, AiHelpDocumentService],
 })
 export class AiModule {}
