@@ -2,7 +2,8 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Profile } from 'passport-google-oauth20';
+import { Profile as GoogleProfile } from 'passport-google-oauth20';
+import { Profile as KakaoProfile } from 'passport-kakao';
 import { AuthProvider, User } from 'src/user/entity/user.entity';
 import { Repository } from 'typeorm';
 import { Request, Response } from 'express';
@@ -30,27 +31,62 @@ export class AuthService {
     };
   }
 
-  async validateGoogleUser(profile: Profile) {
-    const provider = AuthProvider.GOOGLE;
-    const providerUserId = profile.id;
-    const email = profile.emails?.[0]?.value ?? null;
-    const name = profile.displayName ?? 'user';
-    const profileImage = profile.photos?.[0].value ?? null;
+  private async findOrCreateOAuthUser(params: {
+    provider: AuthProvider;
+    providerUserId: string;
+    email: string | null;
+    name: string;
+    profileImage: string | null;
+  }) {
     let user = await this.users.findOne({
-      where: { provider, providerUserId },
+      where: {
+        provider: params.provider,
+        providerUserId: params.providerUserId,
+      },
     });
 
     if (!user) {
       user = this.users.create({
-        name,
-        email,
-        provider,
-        providerUserId,
-        profile: profileImage,
+        name: params.name,
+        email: params.email,
+        provider: params.provider,
+        providerUserId: params.providerUserId,
+        profile: params.profileImage,
       });
       user = await this.users.save(user);
     }
+
     return user;
+  }
+
+  async validateGoogleUser(profile: GoogleProfile) {
+    return this.findOrCreateOAuthUser({
+      provider: AuthProvider.GOOGLE,
+      providerUserId: profile.id,
+      email: profile.emails?.[0]?.value ?? null,
+      name: profile.displayName ?? 'user',
+      profileImage: profile.photos?.[0]?.value ?? null,
+    });
+  }
+
+  async validateKakaoUser(profile: KakaoProfile) {
+    const kakaoAccount = profile._json?.kakao_account;
+    const kakaoProfile = kakaoAccount?.profile;
+
+    return this.findOrCreateOAuthUser({
+      provider: AuthProvider.KAKAO,
+      providerUserId: String(profile.id),
+      email: kakaoAccount?.email ?? null,
+      name:
+        kakaoProfile?.nickname ??
+        profile.displayName ??
+        profile.username ??
+        'user',
+      profileImage:
+        kakaoProfile?.profile_image_url ??
+        kakaoProfile?.thumbnail_image_url ??
+        null,
+    });
   }
 
   async issueAccessToken(user: User) {
@@ -77,7 +113,7 @@ export class AuthService {
     });
   }
 
-  async loginWithGoogle(user: User, res: Response) {
+  private async loginWithOAuth(user: User, res: Response) {
     const accessToken = await this.issueAccessToken(user);
     const refreshToken = await this.issueRefreshToken(user);
 
@@ -98,6 +134,14 @@ export class AuthService {
         envVariableKeys.frontLoginRedirectUrl,
       ),
     };
+  }
+
+  async loginWithGoogle(user: User, res: Response) {
+    return this.loginWithOAuth(user, res);
+  }
+
+  async loginWithKakao(user: User, res: Response) {
+    return this.loginWithOAuth(user, res);
   }
 
   clearCookies(res: Response) {

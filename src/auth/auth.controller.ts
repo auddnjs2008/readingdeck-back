@@ -22,6 +22,20 @@ export class AuthController {
     return res.redirect(redirectUrl);
   }
 
+  @Get('kakao')
+  @Public()
+  @UseGuards(AuthGuard('kakao'))
+  kakaoAuth() {}
+
+  @Get('kakao/callback')
+  @Public()
+  @UseGuards(AuthGuard('kakao'))
+  async kakaoAuthCallback(@Req() req: any, @Res() res: Response) {
+    const user = req.user;
+    const { redirectUrl } = await this.authService.loginWithKakao(user, res);
+    return res.redirect(redirectUrl);
+  }
+
   @Post('/refresh')
   @Public()
   async refreshToekn(
