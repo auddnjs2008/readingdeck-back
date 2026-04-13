@@ -2,6 +2,7 @@ import { Annotation, StateGraph } from '@langchain/langgraph';
 import { ChatOpenAI } from '@langchain/openai';
 import { CardEmbeddingService } from 'src/card-embedding/card-embedding.service';
 import z from 'zod';
+import { AiHelpDocumentService } from '../ai-help-document.service';
 
 const ReadingChatAnnotation = Annotation.Root({
   userId: Annotation<number>,
@@ -27,6 +28,14 @@ const ReadingChatAnnotation = Annotation.Root({
     reducer: (_prev, next) => next,
     default: () => '',
   }),
+  resolvedIntent: Annotation<'personal' | 'product_help'>({
+    reducer: (_prev, next) => next,
+    default: () => 'personal',
+  }),
+  helpDocuments: Annotation<any[]>({
+    reducer: (_prev, next) => next,
+    default: () => [],
+  }),
 });
 
 export type ReadingChatState = typeof ReadingChatAnnotation.State;
@@ -45,18 +54,61 @@ const ReadingChatAnswerSchema = z.object({
   sourceCardIds: z.array(z.number()),
 });
 
+const IntentSchema = z.object({
+  resolvedIntent: z.enum(['personal', 'product_help']),
+});
+
 export function createReadingChatGraph(
   cardEmbeddingService: CardEmbeddingService,
+  aiHelpDocumentService: AiHelpDocumentService,
 ) {
   const model = new ChatOpenAI({
     model: 'gpt-4o-mini',
     temperature: 0.2,
   });
 
+  const intentModel = model.withStructuredOutput(IntentSchema, {
+    name: 'resolve_intent',
+    method: 'functionCalling',
+  });
+
   const structuredModel = model.withStructuredOutput(ReadingChatAnswerSchema, {
     name: 'reading_chat_answer',
     method: 'functionCalling',
   });
+
+  const resolveIntentNode = async (state: ReadingChatState) => {
+    const result = await intentModel.invoke([
+      {
+        role: 'system',
+        content: `
+  너는 질문 분류기다.
+  현재 질문이 아래 둘 중 어디에 해당하는지 분류하라.
+
+  - personal: 사용자가 자신의 독서 기록, 카드, 생각, 패턴, 과거 메모에 대해 묻는 질
+  문
+  - product_help: ReadingDeck 서비스의 기능, 사용법, 화면, 덱, 그래프, 카드 작성 방
+  법, AI 사용법에 대해 묻는 질문
+
+  반드시 둘 중 하나만 반환하라.
+  `,
+      },
+      {
+        role: 'user',
+        content: `
+  이전 대화:
+  ${JSON.stringify(state.history, null, 2)}
+
+  현재 질문:
+  ${state.message}
+  `,
+      },
+    ]);
+
+    return {
+      resolvedIntent: result.resolvedIntent,
+    };
+  };
 
   const rewriteQuery = async (state: ReadingChatState) => {
     const trimmedMessage = state.message.trim();
@@ -132,10 +184,24 @@ ${state.message}
     return {
       retrievedCards: cards,
       sourceCardIds: cardIds,
+      helpDocuments: [],
     };
   };
 
-  const generateAnswer = async (state: ReadingChatState) => {
+  const retrieveHelpDocuments = async (state: ReadingChatState) => {
+    const searchQuery = state.rewrittenQuery || state.message;
+
+    const helpDocuments =
+      await aiHelpDocumentService.searchRelevantHelpDocuments(searchQuery, 3);
+
+    return {
+      helpDocuments,
+      retrievedCards: [],
+      sourceCardIds: [],
+    };
+  };
+
+  const generatePersonalAnswer = async (state: ReadingChatState) => {
     if (state.retrievedCards.length === 0) {
       return {
         answer:
@@ -252,13 +318,109 @@ ${state.message}
     };
   };
 
+  const generateHelpAnswer = async (state: ReadingChatState) => {
+    if (state.helpDocuments.length === 0) {
+      return {
+        answer:
+          '관련된 사용법 문서를 아직 찾지 못했어요. 다른 표현으로 다시 물어보세요.',
+        sourceCardIds: [],
+      };
+    }
+
+    const systemPrompt = `
+<role>
+너는 ReadingDeck의 기능과 사용법을 안내하는 조수다.
+</role>
+
+<goal>
+현재 질문에 대해, 제공된 도움말 문서만 근거로 정확하고 짧게 안내한다.
+</goal>
+
+<rules>
+- 반드시 제공된 도움말 문서만 근거로 답변하라.
+- 도움말 문서에 없는 기능을 있다고 말하지 마라.
+- 확실하지 않으면 모른다고 솔직히 말하라.
+- 불필요한 마케팅 문구나 과장된 표현은 피하라.
+</rules>
+
+<style>
+- 답변은 친근하고 간결하게 작성하라.
+- 실제로 사용자가 무엇을 하면 되는지 중심으로 설명하라.
+- 지나치게 장황하게 쓰지 마라.
+</style>
+
+<format>
+- answer는 반드시 읽기 쉬운 마크다운 문자열로 작성하라.
+- 긴 줄글 한 덩어리로만 답하지 마라.
+- 가능하면 아래 형식을 따른다.
+
+한 줄 요약
+
+- 핵심 안내 1
+- 핵심 안내 2
+- 필요하면 핵심 안내 3
+</format>
+
+<output>
+- sourceCardIds는 항상 빈 배열로 반환하라.
+- 반드시 아래 JSON 형식으로만 응답하라.
+
+{
+  "answer": "string",
+  "sourceCardIds": []
+}
+</output>
+`;
+
+    const userPrompt = `
+<conversation_history>
+${JSON.stringify(state.history, null, 2)}
+</conversation_history>
+
+<current_question>
+${state.message}
+</current_question>
+
+<help_documents>
+${JSON.stringify(state.helpDocuments, null, 2)}
+</help_documents>
+
+<answer_reminder>
+- ReadingDeck의 실제 사용법과 기능만 설명하라.
+- 문서에 없는 기능은 안내하지 마라.
+- answer는 요약 1줄 뒤에 bullet 목록이 오는 마크다운 문자열이어야 한다.
+</answer_reminder>
+`;
+
+    const result = await structuredModel.invoke([
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userPrompt },
+    ]);
+
+    return {
+      answer:
+        result.answer?.trim() ||
+        '관련된 사용법 문서를 바탕으로 답변하지 못했어요.',
+      sourceCardIds: [],
+    };
+  };
+
   return new StateGraph(ReadingChatAnnotation)
     .addNode('rewriteQuery', rewriteQuery)
+    .addNode('resolveIntent', resolveIntentNode)
     .addNode('retrieveCards', retrieveCards)
-    .addNode('generateAnswer', generateAnswer)
+    .addNode('retrieveHelpDocuments', retrieveHelpDocuments)
+    .addNode('generatePersonalAnswer', generatePersonalAnswer)
+    .addNode('generateHelpAnswer', generateHelpAnswer)
     .addEdge('__start__', 'rewriteQuery')
-    .addEdge('rewriteQuery', 'retrieveCards')
-    .addEdge('retrieveCards', 'generateAnswer')
-    .addEdge('generateAnswer', '__end__')
+    .addEdge('rewriteQuery', 'resolveIntent')
+    .addConditionalEdges('resolveIntent', (state) => state.resolvedIntent, {
+      personal: 'retrieveCards',
+      product_help: 'retrieveHelpDocuments',
+    })
+    .addEdge('retrieveCards', 'generatePersonalAnswer')
+    .addEdge('retrieveHelpDocuments', 'generateHelpAnswer')
+    .addEdge('generatePersonalAnswer', '__end__')
+    .addEdge('generateHelpAnswer', '__end__')
     .compile();
 }

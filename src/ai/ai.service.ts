@@ -3,6 +3,7 @@ import { CardEmbeddingService } from 'src/card-embedding/card-embedding.service'
 import { ChatDto } from './dto/chat.dto';
 import { createReadingChatGraph } from './graphs/reading-chat.graph';
 import { AiChatUsageService } from './ai-chat-usage.service';
+import { AiHelpDocumentService } from './ai-help-document.service';
 import { InjectRepository } from '@nestjs/typeorm';
 import { AiChatThread } from './entity/ai-chat-thread.entity';
 import { Repository } from 'typeorm';
@@ -15,6 +16,7 @@ import {
 export class AiService {
   constructor(
     private readonly cardEmbeddingService: CardEmbeddingService,
+    private readonly aiHelpDocumentService: AiHelpDocumentService,
     private readonly aiChatUsageService: AiChatUsageService,
     @InjectRepository(AiChatThread)
     private readonly aiChatThreadRepository: Repository<AiChatThread>,
@@ -30,14 +32,19 @@ export class AiService {
 
     const history = await this.getRecentHistory(thread.id);
 
-    const graph = createReadingChatGraph(this.cardEmbeddingService);
+    const graph = createReadingChatGraph(
+      this.cardEmbeddingService,
+      this.aiHelpDocumentService,
+    );
 
     const result = await graph.invoke({
       userId,
       message: dto.message,
       limit: dto.limit ?? 5,
       rewrittenQuery: '',
+      resolvedIntent: 'personal',
       history,
+      helpDocuments: [],
       retrievedCards: [],
       answer: '',
       sourceCardIds: [],

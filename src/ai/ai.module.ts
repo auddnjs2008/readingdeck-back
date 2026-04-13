@@ -23,7 +23,12 @@ import { AiHelpDocumentSyncService } from './ai-help-document-sync.service';
     ]),
   ],
   controllers: [AiController],
-  providers: [AiService, AiChatUsageService, AiHelpDocumentSyncService],
+  providers: [
+    AiService,
+    AiChatUsageService,
+    AiHelpDocumentSyncService,
+    AiHelpDocumentSyncService,
+  ],
   exports: [AiHelpDocumentSyncService],
 })
 export class AiModule {}
