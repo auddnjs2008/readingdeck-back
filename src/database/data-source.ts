@@ -14,6 +14,7 @@ import { AiChatUsage } from 'src/ai/entity/ai-chat-usage.entity';
 import { AiChatThread } from 'src/ai/entity/ai-chat-thread.entity';
 import { AiChatMessage } from 'src/ai/entity/ai-chat-message.entity';
 import { AiHelpDocument } from 'src/ai/entity/ai-help-document.entity';
+import { AuthMcpCode } from 'src/auth/entity/auth-mcp-code.entity';
 
 const envFilePath =
   process.env.ENV === 'prod'
@@ -42,6 +43,7 @@ export default new DataSource({
     AiChatThread,
     AiChatMessage,
     AiHelpDocument,
+    AuthMcpCode,
   ],
   migrations: ['src/database/migrations/*.ts'],
   synchronize: false,

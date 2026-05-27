@@ -7,14 +7,23 @@ import { User } from 'src/user/entity/user.entity';
 import { GoogleStrategy } from './strategy/google.strategy';
 import { JwtModule } from '@nestjs/jwt';
 import { KakaoStrategy } from './strategy/kakao.strategy';
+import { AuthMcpCode } from './entity/auth-mcp-code.entity';
+import { GoogleMcpAuthGuard } from './guard/google-mcp-auth.guard';
+import { KakaoMcpAuthGuard } from './guard/kakao-mcp-auth.guard';
 
 @Module({
   imports: [
     PassportModule.register({ defaultStrategy: 'jwt', session: false }),
-    TypeOrmModule.forFeature([User]),
+    TypeOrmModule.forFeature([User, AuthMcpCode]),
     JwtModule.register({}),
   ],
-  providers: [AuthService, GoogleStrategy, KakaoStrategy],
+  providers: [
+    AuthService,
+    GoogleStrategy,
+    KakaoStrategy,
+    GoogleMcpAuthGuard,
+    KakaoMcpAuthGuard,
+  ],
   controllers: [AuthController],
   exports: [JwtModule],
 })

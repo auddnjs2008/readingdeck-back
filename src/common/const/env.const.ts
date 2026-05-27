@@ -11,6 +11,8 @@ export const envVariableKeys = {
   accessTokenSecret: 'ACCESS_TOKEN_SECRET',
   refreshTokenSecret: 'REFRESH_TOKEN_SECRET',
   frontLoginRedirectUrl: 'FRONT_LOGIN_REDIRECT_URL',
+  mcpAuthSuccessRedirectUrl: 'MCP_AUTH_SUCCESS_REDIRECT_URL',
+  mcpAuthCodeTtlSeconds: 'MCP_AUTH_CODE_TTL_SECONDS',
   awsSecretAccessKey: 'AWS_SECRET_ACCESS_KEY',
   awsAccessKey: 'AWS_ACCESS_KEY_ID',
   awsRegion: 'AWS_REGION',

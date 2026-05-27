@@ -30,6 +30,7 @@ import { AiChatUsage } from './ai/entity/ai-chat-usage.entity';
 import { AiChatThread } from './ai/entity/ai-chat-thread.entity';
 import { AiChatMessage } from './ai/entity/ai-chat-message.entity';
 import { AiHelpDocument } from './ai/entity/ai-help-document.entity';
+import { AuthMcpCode } from './auth/entity/auth-mcp-code.entity';
 
 const getEnvFilePath = () => {
   switch (process.env.ENV) {
@@ -58,6 +59,8 @@ const getEnvFilePath = () => {
         ACCESS_TOKEN_SECRET: Joi.string().required(),
         REFRESH_TOKEN_SECRET: Joi.string().required(),
         FRONT_LOGIN_REDIRECT_URL: Joi.string().required(),
+        MCP_AUTH_SUCCESS_REDIRECT_URL: Joi.string().uri().optional(),
+        MCP_AUTH_CODE_TTL_SECONDS: Joi.number().integer().min(30).optional(),
         OPENAI_API_KEY: Joi.string().required(),
       }),
     }),
@@ -88,6 +91,7 @@ const getEnvFilePath = () => {
             AiChatThread,
             AiChatMessage,
             AiHelpDocument,
+            AuthMcpCode,
           ],
           synchronize: !isProduction,
         };
