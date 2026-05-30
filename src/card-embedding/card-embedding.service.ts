@@ -138,6 +138,26 @@ export class CardEmbeddingService {
     }));
   }
 
+  async searchRelevantCardItems(userId: number, query: string, limit = 5) {
+    const matches = await this.searchRelevantCards(userId, query, limit);
+
+    if (matches.length === 0) {
+      return { items: [] };
+    }
+
+    const cards = await this.getCardsByIds(matches.map((item) => item.cardId));
+    const distanceMap = new Map(
+      matches.map((item) => [item.cardId, item.distance]),
+    );
+
+    return {
+      items: cards.map((card) => ({
+        ...card,
+        distance: distanceMap.get(card.cardId) ?? null,
+      })),
+    };
+  }
+
   private toVectorLiteral(values: number[]) {
     return `[${values.join(',')}]`;
   }

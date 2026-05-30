@@ -16,4 +16,15 @@ export class CardEmbeddingController {
       dto.limit ?? 5,
     );
   }
+
+  @Post('search/cards')
+  searchCards(@Req() req: any, @Body() dto: SearchCardEmbeddingDto) {
+    const userId = req.user.sub;
+
+    return this.cardEmbeddingService.searchRelevantCardItems(
+      userId,
+      dto.message,
+      dto.limit ?? 5,
+    );
+  }
 }
