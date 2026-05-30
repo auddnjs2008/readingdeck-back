@@ -12,12 +12,19 @@ import {
   Req,
 } from '@nestjs/common';
 import { CardService } from './card.service';
+import { GetRecentCardsQueryDto } from './dto/get-recent-cards-query.dto';
 import { GetTodayCardsQueryDto } from './dto/get-today-cards-query.dto';
 import { UpdateCardDto } from './dto/update-card.dto';
 
 @Controller('cards')
 export class CardController {
   constructor(private readonly cardService: CardService) {}
+
+  @Get('recent')
+  getRecentCards(@Req() req: any, @Query() query: GetRecentCardsQueryDto) {
+    const userId = req.user.sub;
+    return this.cardService.getRecentCards(userId, query.limit ?? 10);
+  }
 
   @Get('today')
   getTodayCards(@Req() req: any, @Query() query: GetTodayCardsQueryDto) {

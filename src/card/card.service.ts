@@ -75,6 +75,31 @@ export class CardService {
     return items.map((card) => this.mapCardBookImage(card));
   }
 
+  async getRecentCards(userId: number, limit = 10) {
+    const items = await this.cardRepository
+      .createQueryBuilder('card')
+      .leftJoinAndSelect('card.book', 'book')
+      .where('book.userId = :userId', { userId })
+      .orderBy('card.createdAt', 'DESC')
+      .take(limit)
+      .getMany();
+
+    return {
+      items: items.map((card) => ({
+        cardId: card.id,
+        type: card.type,
+        thought: card.thought,
+        quote: card.quote ?? null,
+        bookTitle: card.book.title,
+        author: card.book.author,
+        pageStart: card.pageStart ?? null,
+        pageEnd: card.pageEnd ?? null,
+        distance: null,
+        createdAt: card.createdAt,
+      })),
+    };
+  }
+
   async getCardDetail(userId: number, cardId: number) {
     const card = await this.cardRepository.findOne({
       where: { id: cardId },
