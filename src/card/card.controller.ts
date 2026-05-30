@@ -12,6 +12,7 @@ import {
   Req,
 } from '@nestjs/common';
 import { CardService } from './card.service';
+import { GetBookCardsQueryDto } from './dto/get-bookcards-query.dto';
 import { GetRecentCardsQueryDto } from './dto/get-recent-cards-query.dto';
 import { GetTodayCardsQueryDto } from './dto/get-today-cards-query.dto';
 import { UpdateCardDto } from './dto/update-card.dto';
@@ -24,6 +25,16 @@ export class CardController {
   getRecentCards(@Req() req: any, @Query() query: GetRecentCardsQueryDto) {
     const userId = req.user.sub;
     return this.cardService.getRecentCards(userId, query.limit ?? 10);
+  }
+
+  @Get('by-book/:bookId')
+  getCardsByBook(
+    @Req() req: any,
+    @Param('bookId', ParseIntPipe) bookId: number,
+    @Query() query: GetBookCardsQueryDto,
+  ) {
+    const userId = req.user.sub;
+    return this.cardService.getCardsByBook(userId, bookId, query);
   }
 
   @Get('today')

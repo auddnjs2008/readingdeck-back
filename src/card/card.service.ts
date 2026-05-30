@@ -100,6 +100,97 @@ export class CardService {
     };
   }
 
+  async getCardsByBook(
+    userId: number,
+    bookId: number,
+    query: GetBookCardsQueryDto,
+  ) {
+    const book = await this.bookRepository.findOne({
+      where: { id: bookId },
+      relations: { user: true },
+    });
+
+    if (!book) {
+      throw new NotFoundException('해당 관련 책을 찾을 수 없습니다.');
+    }
+
+    if (book.user.id !== userId) {
+      throw new ForbiddenException('접근 권한이 없습니다.');
+    }
+
+    const {
+      take = 10,
+      cursor,
+      types,
+      hasQuote,
+      sort = CardSortType.LATEST,
+      pageEnd,
+      pageStart,
+    } = query;
+
+    const cardQb = this.cardRepository
+      .createQueryBuilder('card')
+      .where('card.bookId = :bookId', { bookId });
+
+    if (types && types.length > 0) {
+      cardQb.andWhere('card.type IN (:...types)', { types });
+    }
+
+    if (hasQuote === true) {
+      cardQb.andWhere('card.quote IS NOT NULL');
+    }
+
+    if (hasQuote === false) {
+      cardQb.andWhere('card.quote IS NULL');
+    }
+
+    if (pageStart) {
+      cardQb.andWhere(
+        '(card.pageEnd >= :pageStart OR (card.pageEnd IS NULL AND card.pageStart >= :pageStart) )',
+        { pageStart },
+      );
+    }
+
+    if (pageEnd) {
+      cardQb.andWhere(
+        '(card.pageStart <= :pageEnd OR (card.pageStart IS NULL AND card.pageEnd <= :pageEnd))',
+        { pageEnd },
+      );
+    }
+
+    if (sort === CardSortType.OLDEST) {
+      cardQb.orderBy('card.id', 'ASC');
+      if (cursor) cardQb.andWhere('card.id > :cursor', { cursor });
+    } else {
+      cardQb.orderBy('card.id', 'DESC');
+      if (cursor) cardQb.andWhere('card.id < :cursor', { cursor });
+    }
+
+    cardQb.take(take);
+
+    const items = await cardQb.getMany();
+
+    return {
+      items: items.map((card) => ({
+        cardId: card.id,
+        type: card.type,
+        thought: card.thought,
+        quote: card.quote ?? null,
+        bookTitle: book.title,
+        author: book.author,
+        pageStart: card.pageStart ?? null,
+        pageEnd: card.pageEnd ?? null,
+        distance: null,
+        createdAt: card.createdAt,
+      })),
+      book: {
+        bookId: book.id,
+        title: book.title,
+        author: book.author,
+      },
+    };
+  }
+
   async getCardDetail(userId: number, cardId: number) {
     const card = await this.cardRepository.findOne({
       where: { id: cardId },
