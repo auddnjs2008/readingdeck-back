@@ -1,19 +1,26 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Patch,
   Req,
+  Res,
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { MeService } from './me.service';
 import { UpdateMyProfileDto } from './dto/update-my-profile.dto';
+import { AuthService } from 'src/auth/auth.service';
+import { Response } from 'express';
 
 @Controller('me')
 export class MeController {
-  constructor(private readonly MeService: MeService) {}
+  constructor(
+    private readonly MeService: MeService,
+    private readonly authService: AuthService,
+  ) {}
 
   @Get()
   async getMyProfile(@Req() req: any) {
@@ -30,6 +37,21 @@ export class MeController {
   ) {
     const userId = req.user.sub;
     return this.MeService.updateMyProfile(userId, dto, file);
+  }
+
+  @Delete()
+  async deleteMyAccount(
+    @Req() req: any,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const userId = req.user.sub;
+    await this.MeService.deleteMyAccount(userId);
+    this.authService.clearCookies(res);
+
+    return {
+      success: true,
+      message: '회원 탈퇴가 완료되었습니다.',
+    };
   }
 
   @Get('library-stats')

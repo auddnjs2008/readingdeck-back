@@ -180,6 +180,17 @@ export class MeService {
     };
   }
 
+  async deleteMyAccount(userId: number) {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('해당 유저가 존재하지 않습니다.');
+    }
+
+    await this.userRepository.delete({ id: userId });
+
+    return { success: true };
+  }
+
   async getLibraryStats(userId: number) {
     const user = await this.userRepository.findOne({ where: { id: userId } });
     if (!user) {

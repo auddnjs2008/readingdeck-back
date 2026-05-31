@@ -25,6 +25,6 @@ import { KakaoMcpAuthGuard } from './guard/kakao-mcp-auth.guard';
     KakaoMcpAuthGuard,
   ],
   controllers: [AuthController],
-  exports: [JwtModule],
+  exports: [JwtModule, AuthService],
 })
 export class AuthModule {}

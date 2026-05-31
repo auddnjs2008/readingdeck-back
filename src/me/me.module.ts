@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { AuthModule } from 'src/auth/auth.module';
 import { MeService } from './me.service';
 import { MeController } from './me.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -9,7 +10,7 @@ import { User } from 'src/user/entity/user.entity';
 import { Card } from 'src/card/entity/card.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Book, User, Card, Deck, DeckNode])],
+  imports: [AuthModule, TypeOrmModule.forFeature([Book, User, Card, Deck, DeckNode])],
   providers: [MeService],
   controllers: [MeController],
 })
