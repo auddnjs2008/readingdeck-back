@@ -284,7 +284,7 @@ export class AuthService {
       res.cookie(
         'access_token',
         newAccessToken,
-        this.getCookieOptions(15 * 60 * 1000),
+        this.getCookieOptions(5 * 60 * 1000),
       );
       return { ok: true };
     } catch {
