@@ -30,12 +30,25 @@ export class AuthService {
     const isProduction =
       this.configService.get<string>(envVariableKeys.env) === 'prod';
     const sameSite: 'none' | 'lax' = isProduction ? 'none' : 'lax';
+    const domain = this.configService.get<string>(envVariableKeys.cookieDomain);
 
     return {
       httpOnly: true,
       secure: isProduction,
       sameSite,
       maxAge,
+      ...(domain ? { domain } : {}),
+    };
+  }
+
+  private getClearCookieOptions() {
+    const options = this.getCookieOptions(0);
+
+    return {
+      httpOnly: options.httpOnly,
+      secure: options.secure,
+      sameSite: options.sameSite,
+      ...(options.domain ? { domain: options.domain } : {}),
     };
   }
 
@@ -242,20 +255,11 @@ export class AuthService {
   }
 
   clearCookies(res: Response) {
-    const isProduction =
-      this.configService.get<string>(envVariableKeys.env) === 'prod';
+    const options = this.getClearCookieOptions();
 
-    res.clearCookie('access_token', {
-      httpOnly: true,
-      secure: isProduction,
-      sameSite: isProduction ? 'none' : 'lax',
-    });
+    res.clearCookie('access_token', options);
 
-    res.clearCookie('refresh_token', {
-      httpOnly: true,
-      secure: isProduction,
-      sameSite: isProduction ? 'none' : 'lax',
-    });
+    res.clearCookie('refresh_token', options);
   }
 
   async refreshToken(req: Request, res: Response) {

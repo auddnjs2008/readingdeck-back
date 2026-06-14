@@ -59,6 +59,7 @@ const getEnvFilePath = () => {
         ACCESS_TOKEN_SECRET: Joi.string().required(),
         REFRESH_TOKEN_SECRET: Joi.string().required(),
         FRONT_LOGIN_REDIRECT_URL: Joi.string().required(),
+        COOKIE_DOMAIN: Joi.string().optional(),
         MCP_AUTH_SUCCESS_REDIRECT_URL: Joi.string().uri().optional(),
         MCP_AUTH_CODE_TTL_SECONDS: Joi.number().integer().min(30).optional(),
         OPENAI_API_KEY: Joi.string().required(),
