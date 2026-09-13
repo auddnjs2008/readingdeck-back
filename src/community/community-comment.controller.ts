@@ -12,12 +12,14 @@ import {
 } from '@nestjs/common';
 import { CommunityService } from './community.service';
 import { CreateCommunityCommentDto } from './dto/create-community-comment.dto';
+import { Public } from '../auth/decorator/public.decorator';
 
 @Controller('community')
 export class CommunityCommentController {
   constructor(private readonly communityService: CommunityService) {}
 
   @Get('posts/:postId/comments')
+  @Public()
   getCommunityComments(@Param('postId', ParseIntPipe) postId: number) {
     return this.communityService.getCommunityComments(postId);
   }

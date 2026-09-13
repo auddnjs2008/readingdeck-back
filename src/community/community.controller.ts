@@ -14,17 +14,20 @@ import {
 import { CommunityService } from './community.service';
 import { CreateCommunityPostDto } from './dto/create-community-post.dto';
 import { GetCommunityPostsQueryDto } from './dto/get-community-posts-query.dto';
+import { Public } from '../auth/decorator/public.decorator';
 
 @Controller('community/posts')
 export class CommunityController {
   constructor(private readonly communityService: CommunityService) {}
 
   @Get()
+  @Public()
   getCommunityPosts(@Query() query: GetCommunityPostsQueryDto) {
     return this.communityService.getCommunityPosts(query);
   }
 
   @Get(':postId')
+  @Public()
   getCommunityPost(@Param('postId', ParseIntPipe) postId: number) {
     return this.communityService.getCommunityPost(postId);
   }
