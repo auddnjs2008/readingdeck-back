@@ -12,31 +12,49 @@ export class AiChatUsageService {
     private readonly aiChatUsageRepository: Repository<AiChatUsage>,
   ) {}
 
-  async assertWithinDailyLimit(userId: number) {
-    const today = new Date().toISOString().slice(0, 10);
-
-    let usage = await this.aiChatUsageRepository.findOne({
-      where: { userId, date: today },
+  async getUsage(userId: number) {
+    const now = new Date();
+    const date = now.toISOString().slice(0, 10);
+    const usage = await this.aiChatUsageRepository.findOne({
+      where: { userId, date },
     });
+    const resetsAt = new Date(date);
+    resetsAt.setUTCDate(resetsAt.getUTCDate() + 1);
+    return {
+      limit: DAILY_AI_CHAT_LIMIT,
+      remaining: Math.max(0, DAILY_AI_CHAT_LIMIT - (usage?.count ?? 0)),
+      resetsAt: resetsAt.toISOString(),
+    };
+  }
 
-    if (!usage) {
-      usage = this.aiChatUsageRepository.create({
-        userId,
-        date: today,
-        count: 1,
-      });
-      await this.aiChatUsageRepository.save(usage);
-      return;
-    }
-
-    if (usage.count >= DAILY_AI_CHAT_LIMIT) {
+  async reserve(userId: number): Promise<string> {
+    const date = new Date().toISOString().slice(0, 10);
+    // The unique user/day index serializes competing requests, including first use.
+    const rows: { count: number }[] = await this.aiChatUsageRepository.query(
+      `INSERT INTO "ai_chat_usage" ("userId", "date", "count", "version")
+       VALUES ($1, $2, 1, 1)
+       ON CONFLICT ("userId", "date") DO UPDATE
+       SET "count" = "ai_chat_usage"."count" + 1,
+           "updatedAt" = now(), "version" = "ai_chat_usage"."version" + 1
+       WHERE "ai_chat_usage"."count" < $3
+       RETURNING "count"`,
+      [userId, date, DAILY_AI_CHAT_LIMIT],
+    );
+    if (rows.length === 0) {
       throw new HttpException(
-        '오늘 AI 대화 사용 한도에 도달했어요. 내일 다시 시도해 주세요.',
+        '오늘 AI 대화 10회를 모두 사용했어요. 한국 시간 오전 9시에 다시 이용할 수 있어요.',
         HttpStatus.TOO_MANY_REQUESTS,
       );
     }
+    return date;
+  }
 
-    usage.count += 1;
-    await this.aiChatUsageRepository.save(usage);
+  async refund(userId: number, date: string): Promise<void> {
+    await this.aiChatUsageRepository.query(
+      `UPDATE "ai_chat_usage"
+       SET "count" = GREATEST("count" - 1, 0), "updatedAt" = now(), "version" = "version" + 1
+       WHERE "userId" = $1 AND "date" = $2`,
+      [userId, date],
+    );
   }
 }

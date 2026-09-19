@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { CardEmbeddingService } from 'src/card-embedding/card-embedding.service';
 import { ChatDto } from './dto/chat.dto';
 import { createReadingChatGraph } from './graphs/reading-chat.graph';
@@ -14,6 +14,7 @@ import {
 
 @Injectable()
 export class AiService {
+  private readonly logger = new Logger(AiService.name);
   constructor(
     private readonly cardEmbeddingService: CardEmbeddingService,
     private readonly aiHelpDocumentService: AiHelpDocumentService,
@@ -25,8 +26,21 @@ export class AiService {
   ) {}
 
   async chat(userId: number, dto: ChatDto) {
-    await this.aiChatUsageService.assertWithinDailyLimit(userId);
+    const usageDate = await this.aiChatUsageService.reserve(userId);
+    try {
+      return await this.generateReply(userId, dto);
+    } catch (error) {
+      // ponytail: process crashes need a reservation ledger if recovery becomes necessary.
+      try {
+        await this.aiChatUsageService.refund(userId, usageDate);
+      } catch (refundError) {
+        this.logger.error('Failed to refund AI chat usage', refundError);
+      }
+      throw error;
+    }
+  }
 
+  private async generateReply(userId: number, dto: ChatDto) {
     const thread = await this.getOrCreateThread(userId, dto.threadId);
     await this.saveMessage(thread.id, AiChatMessageRole.USER, dto.message);
 
