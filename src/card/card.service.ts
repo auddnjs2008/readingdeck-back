@@ -8,6 +8,7 @@ import {
 import { GetTodayCardsQueryDto } from './dto/get-today-cards-query.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Card } from './entity/card.entity';
+import { CardReflection } from './entity/card-reflection.entity';
 import { Repository } from 'typeorm';
 import { CreateCardDto } from './dto/create-card.dto';
 import { User } from 'src/user/entity/user.entity';
@@ -296,7 +297,23 @@ export class CardService {
 
     cardQb.take(take + 1);
 
-    const items = await cardQb.getMany();
+    const { entities, raw } = await cardQb
+      .addSelect(
+        (qb) =>
+          qb
+            .select('COUNT(*)')
+            .from(CardReflection, 'reflection')
+            .where('reflection.cardId = card.id'),
+        'reflectionCount',
+      )
+      .getRawAndEntities();
+    const counts = new Map(
+      raw.map((row) => [Number(row.card_id), Number(row.reflectionCount)]),
+    );
+    const items = entities.map((card) => ({
+      ...card,
+      reflectionCount: counts.get(card.id) ?? 0,
+    }));
 
     const hasNext = items.length > take;
     const trimmedItems = hasNext ? items.slice(0, take) : items;
