@@ -8,6 +8,7 @@ import {
   ManyToOne,
   OneToMany,
   PrimaryGeneratedColumn,
+  Index,
 } from 'typeorm';
 
 export enum DeckStatus {
@@ -50,9 +51,13 @@ export type DeckListPreview = {
 export type DeckPreview = DeckGraphPreview | DeckListPreview;
 
 @Entity()
+@Index('UQ_deck_user_request', ['userId', 'requestId'], { unique: true })
 export class Deck extends BaseTable {
   @PrimaryGeneratedColumn()
   id: number;
+
+  @Column({ type: 'uuid', nullable: true })
+  requestId: string | null;
 
   @Column({ length: 255, default: 'Untitled Deck' })
   name: string;

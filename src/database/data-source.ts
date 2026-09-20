@@ -3,6 +3,7 @@ import { DataSource } from 'typeorm';
 import { User } from 'src/user/entity/user.entity';
 import { Book } from 'src/book/entity/book.entity';
 import { Card } from 'src/card/entity/card.entity';
+import { CardReflection } from 'src/card/entity/card-reflection.entity';
 import { CommunityComment } from 'src/community/entity/community-comment.entity';
 import { CommunityPost } from 'src/community/entity/community-post.entity';
 import { Deck } from 'src/deck/entity/deck.entity';
@@ -32,6 +33,7 @@ export default new DataSource({
     User,
     Book,
     Card,
+    CardReflection,
     Deck,
     DeckNode,
     DeckConnection,

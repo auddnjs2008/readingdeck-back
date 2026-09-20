@@ -6,12 +6,17 @@ import {
   IsString,
   Length,
   ValidateNested,
+  IsUUID,
 } from 'class-validator';
 import { DeckMode, DeckStatus } from 'src/deck/entity/deck.entity';
 import { DeckGraphConnectionDto } from './deck-graph-connection.dto';
 import { DeckGraphNodeDto } from './deck-graph-node.dto';
 
 export class CreateDeckDto {
+  @IsOptional()
+  @IsUUID()
+  requestId?: string;
+
   @IsOptional()
   @IsString()
   @Length(1, 255)

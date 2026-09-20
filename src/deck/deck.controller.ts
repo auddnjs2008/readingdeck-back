@@ -20,6 +20,7 @@ import { UpdateDeckGraphDto } from './dto/update-deck-graph.dto';
 import { DeckService } from './deck.service';
 import { GetDecksQueryDto } from './dto/get-decks-query.dto';
 import { GetDecksResponseDto } from './dto/get-decks-response.dto';
+import { AddCardConnectionDto } from './dto/add-card-connection.dto';
 
 @Controller('decks')
 export class DeckController {
@@ -64,6 +65,15 @@ export class DeckController {
   ) {
     const userId = req.user.sub;
     return this.deckService.updateDeckGraph(userId, deckId, updateDeckGraphDto);
+  }
+
+  @Post(':deckId/card-connections')
+  addCardConnection(
+    @Req() req: any,
+    @Param('deckId', ParseIntPipe) id: number,
+    @Body() dto: AddCardConnectionDto,
+  ) {
+    return this.deckService.addCardConnection(req.user.sub, id, dto);
   }
 
   @Post(':deckId/publish')

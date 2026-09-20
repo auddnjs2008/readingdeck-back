@@ -10,6 +10,7 @@ import { JwtAuthGuard } from './auth/guard/jwt-auth.guard';
 import { BookModule } from './book/book.module';
 import { Book } from './book/entity/book.entity';
 import { Card } from './card/entity/card.entity';
+import { CardReflection } from './card/entity/card-reflection.entity';
 import { MeModule } from './me/me.module';
 import { CardModule } from './card/card.module';
 import { CommunityComment } from './community/entity/community-comment.entity';
@@ -81,6 +82,7 @@ const getEnvFilePath = () => {
             User,
             Book,
             Card,
+            CardReflection,
             Deck,
             DeckNode,
             DeckConnection,

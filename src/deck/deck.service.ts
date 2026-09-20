@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -11,7 +12,7 @@ import { CommunityPost } from 'src/community/entity/community-post.entity';
 import { DeckConnection } from 'src/deck-connection/entity/deck-connection.entity';
 import { DeckNode, DeckNodeType } from 'src/deck-node/entity/deck-node.entity';
 import { User } from 'src/user/entity/user.entity';
-import { DataSource, In, Repository } from 'typeorm';
+import { DataSource, EntityManager, In, Repository } from 'typeorm';
 import { CreateDeckDto } from './dto/create-deck.dto';
 import { GetDecksQueryDto } from './dto/get-decks-query.dto';
 import { GetDecksResponseDto } from './dto/get-decks-response.dto';
@@ -20,6 +21,7 @@ import { UpdateDeckDto } from './dto/update-deck.dto';
 import { UpdateDeckGraphDto } from './dto/update-deck-graph.dto';
 import { Deck, DeckMode, DeckStatus } from './entity/deck.entity';
 import { S3Service } from 'src/common/service/s3.service';
+import { AddCardConnectionDto, RELATIONS } from './dto/add-card-connection.dto';
 
 type DeckListRawRow = {
   id: number;
@@ -198,6 +200,41 @@ export class DeckService {
       const nodeRepo = manager.getRepository(DeckNode);
       const connectionRepo = manager.getRepository(DeckConnection);
 
+      if (dto.requestId) {
+        // Serialize only retries of this creation, including a lost HTTP response.
+        await manager.query(
+          'SELECT pg_advisory_xact_lock(hashtextextended($1, 0))',
+          [`deck:${userId}:${dto.requestId}`],
+        );
+        const existing = await deckRepo.findOneBy({
+          userId,
+          requestId: dto.requestId,
+        });
+        if (existing)
+          return {
+            ...existing,
+            nodes: await nodeRepo.findBy({ deckId: existing.id }),
+            connections: await connectionRepo.findBy({ deckId: existing.id }),
+          };
+        // Request IDs are used by the two-card reflection flow; validate its boundaries server-side.
+        if (
+          dto.status !== DeckStatus.DRAFT ||
+          dto.mode !== DeckMode.GRAPH ||
+          nodes.length !== 2 ||
+          nodes.some((n) => n.type !== DeckNodeType.CARD)
+        ) {
+          throw new BadRequestException(
+            '두 카드로 비공개 그래프 초안을 만들어 주세요.',
+          );
+        }
+        const cards = await manager.getRepository(Card).find({
+          where: { id: In(nodes.map((n) => n.cardId)) },
+          relations: { book: true },
+        });
+        if (cards.length !== 2 || cards[0].book.id === cards[1].book.id)
+          throw new BadRequestException('서로 다른 책의 카드를 선택해 주세요.');
+      }
+
       const deck = await deckRepo.save(
         deckRepo.create({
           name: dto.name?.trim() || 'Untitled Deck',
@@ -205,6 +242,7 @@ export class DeckService {
           status: dto.status ?? DeckStatus.DRAFT,
           mode: dto.mode ?? DeckMode.GRAPH,
           userId,
+          requestId: dto.requestId ?? null,
         }),
       );
 
@@ -373,28 +411,33 @@ export class DeckService {
   }
 
   async updateDeck(userId: number, deckId: number, dto: UpdateDeckDto) {
-    const deck = await this.findOwnedDeck(userId, deckId);
+    return this.dataSource.transaction(async (manager) => {
+      const deck = await this.lockOwnedDeck(manager, userId, deckId);
+      if (dto.expectedVersion != null && dto.expectedVersion !== deck.version)
+        throw new ConflictException('다른 화면에서 덱이 변경되었습니다.');
 
-    if (dto.name?.trim()) {
-      deck.name = dto.name.trim();
-    }
-    if (dto.description !== undefined) {
-      deck.description = this.normalizeDescription(dto.description);
-    }
-    if (dto.mode) {
-      deck.mode = dto.mode;
-    }
+      if (dto.name?.trim()) {
+        deck.name = dto.name.trim();
+      }
+      if (dto.description !== undefined) {
+        deck.description = this.normalizeDescription(dto.description);
+      }
+      if (dto.mode) {
+        deck.mode = dto.mode;
+      }
 
-    const savedDeck = await this.deckRepository.save(deck);
+      const savedDeck = await manager.getRepository(Deck).save(deck);
 
-    return {
-      id: savedDeck.id,
-      name: savedDeck.name,
-      description: savedDeck.description,
-      status: savedDeck.status,
-      mode: savedDeck.mode,
-      updatedAt: savedDeck.updatedAt,
-    };
+      return {
+        id: savedDeck.id,
+        name: savedDeck.name,
+        description: savedDeck.description,
+        status: savedDeck.status,
+        mode: savedDeck.mode,
+        updatedAt: savedDeck.updatedAt,
+        version: savedDeck.version,
+      };
+    });
   }
 
   async updateDeckGraph(
@@ -402,12 +445,16 @@ export class DeckService {
     deckId: number,
     dto: UpdateDeckGraphDto,
   ) {
-    const deck = await this.findOwnedDeck(userId, deckId);
     const nodes = dto.nodes ?? [];
     const connections = dto.connections ?? [];
-    await this.validateNodeAssetsOwnership(userId, nodes);
 
     return this.dataSource.transaction(async (manager) => {
+      const deck = await this.lockOwnedDeck(manager, userId, deckId);
+      if (dto.expectedVersion !== deck.version)
+        throw new ConflictException(
+          '다른 화면에서 덱이 변경되었습니다. 입력을 보관한 뒤 새로 불러와 주세요.',
+        );
+      await this.validateNodeAssetsOwnership(userId, nodes);
       const nodeRepo = manager.getRepository(DeckNode);
       const connectionRepo = manager.getRepository(DeckConnection);
       const deckRepo = manager.getRepository(Deck);
@@ -462,6 +509,7 @@ export class DeckService {
         id: updatedDeck.id,
         status: updatedDeck.status,
         updatedAt: updatedDeck.updatedAt,
+        version: updatedDeck.version,
         nodes: savedNodes,
         connections: savedConnections,
       };
@@ -469,33 +517,149 @@ export class DeckService {
   }
 
   async publishDeck(userId: number, deckId: number, dto: PublishDeckDto) {
-    const deck = await this.findOwnedDeck(userId, deckId);
+    return this.dataSource.transaction(async (manager) => {
+      const deck = await this.lockOwnedDeck(manager, userId, deckId);
+      if (dto.expectedVersion !== deck.version) {
+        throw new ConflictException('다른 화면에서 덱이 변경되었습니다.');
+      }
 
-    const nodeCount = await this.deckNodeRepository.count({
-      where: { deckId },
+      const nodeCount = await manager.getRepository(DeckNode).count({
+        where: { deckId },
+      });
+      if (nodeCount < 1) {
+        throw new BadRequestException(
+          '발행하려면 최소 1개의 노드가 필요합니다.',
+        );
+      }
+
+      if (dto.name?.trim()) {
+        deck.name = dto.name.trim();
+      }
+      if (dto.description !== undefined) {
+        deck.description = this.normalizeDescription(dto.description);
+      }
+      deck.status = DeckStatus.PUBLISHED;
+
+      const savedDeck = await manager.getRepository(Deck).save(deck);
+
+      return {
+        id: savedDeck.id,
+        name: savedDeck.name,
+        description: savedDeck.description,
+        status: savedDeck.status,
+        mode: savedDeck.mode,
+        updatedAt: savedDeck.updatedAt,
+        version: savedDeck.version,
+      };
     });
-    if (nodeCount < 1) {
-      throw new BadRequestException('발행하려면 최소 1개의 노드가 필요합니다.');
-    }
+  }
 
-    if (dto.name?.trim()) {
-      deck.name = dto.name.trim();
-    }
-    if (dto.description !== undefined) {
-      deck.description = this.normalizeDescription(dto.description);
-    }
-    deck.status = DeckStatus.PUBLISHED;
+  private async lockOwnedDeck(
+    manager: EntityManager,
+    userId: number,
+    deckId: number,
+  ) {
+    const deck = await manager
+      .getRepository(Deck)
+      .findOne({ where: { id: deckId }, lock: { mode: 'pessimistic_write' } });
+    if (!deck) throw new NotFoundException('덱을 찾을 수 없습니다.');
+    if (deck.userId !== userId)
+      throw new ForbiddenException('접근 권한이 없습니다.');
+    return deck;
+  }
 
-    const savedDeck = await this.deckRepository.save(deck);
-
-    return {
-      id: savedDeck.id,
-      name: savedDeck.name,
-      description: savedDeck.description,
-      status: savedDeck.status,
-      mode: savedDeck.mode,
-      updatedAt: savedDeck.updatedAt,
-    };
+  async addCardConnection(
+    userId: number,
+    deckId: number,
+    dto: AddCardConnectionDto,
+  ) {
+    return this.dataSource.transaction(async (manager) => {
+      const deck = await this.lockOwnedDeck(manager, userId, deckId);
+      if (
+        deck.mode !== DeckMode.GRAPH ||
+        deck.status !== DeckStatus.DRAFT ||
+        (await manager.getRepository(CommunityPost).existsBy({ deckId }))
+      ) {
+        throw new BadRequestException(
+          '비공개 그래프 초안에만 연결할 수 있습니다.',
+        );
+      }
+      const cards = await manager.getRepository(Card).find({
+        where: { id: In([dto.fromCardId, dto.toCardId]) },
+        relations: { book: { user: true } },
+      });
+      if (cards.length !== 2 || cards.some((c) => c.book.user.id !== userId))
+        throw new ForbiddenException('내 카드 두 장을 선택해 주세요.');
+      if (cards[0].book.id === cards[1].book.id)
+        throw new BadRequestException('다른 책의 카드를 선택해 주세요.');
+      const nodeRepo = manager.getRepository(DeckNode);
+      const edgeRepo = manager.getRepository(DeckConnection);
+      const nodes = await nodeRepo.find({
+        where: { deckId },
+        order: { order: 'ASC', id: 'ASC' },
+      });
+      const edges = await edgeRepo.find({ where: { deckId } });
+      const cardByNode = new Map(
+        nodes
+          .filter((n) => n.type === DeckNodeType.CARD)
+          .map((n) => [n.id, n.cardId]),
+      );
+      const existing = edges.find(
+        (e) =>
+          cardByNode.get(e.fromNodeId) === dto.fromCardId &&
+          cardByNode.get(e.toNodeId) === dto.toCardId,
+      );
+      if (existing)
+        return {
+          deckId,
+          connection: existing,
+          alreadyConnected: true,
+          version: deck.version,
+        };
+      const pair: DeckNode[] = [];
+      const y = Math.max(0, ...nodes.map((n) => n.positionY + 350));
+      for (const [index, cardId] of [dto.fromCardId, dto.toCardId].entries()) {
+        let node = nodes.find(
+          (n) => n.type === DeckNodeType.CARD && n.cardId === cardId,
+        );
+        if (!node) {
+          node = await nodeRepo.save(
+            nodeRepo.create({
+              deckId,
+              type: DeckNodeType.CARD,
+              cardId,
+              positionX: index * 400,
+              positionY: y,
+              order: Math.max(-1, ...nodes.map((n) => n.order)) + 1,
+            }),
+          );
+          nodes.push(node);
+        }
+        pair.push(node);
+      }
+      const connection = await edgeRepo.save(
+        edgeRepo.create({
+          deckId,
+          fromNodeId: pair[0].id,
+          toNodeId: pair[1].id,
+          type: dto.relation,
+          label: RELATIONS[dto.relation],
+        }),
+      );
+      const preview = await this.buildDeckPreview(deck.mode, nodes, [
+        ...edges,
+        connection,
+      ]);
+      const saved = await manager
+        .getRepository(Deck)
+        .save({ ...deck, preview, previewUpdatedAt: new Date() });
+      return {
+        deckId,
+        connection,
+        alreadyConnected: false,
+        version: saved.version,
+      };
+    });
   }
 
   async deleteDeck(userId: number, deckId: number) {
