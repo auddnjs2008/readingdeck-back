@@ -11,6 +11,12 @@ export class Feedback extends BaseTable {
   @Column({ nullable: true })
   userId: number | null;
 
+  @Column({ type: 'varchar', length: 16, nullable: true })
+  category: 'problem' | 'suggestion' | 'other' | null;
+
+  @Column({ type: 'varchar', length: 254, nullable: true })
+  replyEmail: string | null;
+
   @Column({ type: 'text' })
   message: string;
 

@@ -17,6 +17,8 @@ export class FeedbackService {
   ) {
     const feedback = this.feedbackRepository.create({
       userId: userId ?? null,
+      category: createFeedbackDto.category ?? null,
+      replyEmail: createFeedbackDto.replyEmail?.trim() || null,
       message: createFeedbackDto.message.trim(),
       pagePath: createFeedbackDto.pagePath?.trim() || null,
     });
