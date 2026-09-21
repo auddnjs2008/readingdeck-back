@@ -1,11 +1,13 @@
 import {
   ConflictException,
+  BadRequestException,
   ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { UploadAssetType } from 'src/common/const/upload-path.const';
+import { normalizeIsbn } from './isbn';
 import { Book } from './entity/book.entity';
 import { In, Repository } from 'typeorm';
 import { CreateBookDto } from './dto/create-book.dto';
@@ -75,8 +77,12 @@ export class BookService {
   async getBooks(userId: number, query: GetBookQueryDto) {
     const { page = 1, take = 10, keyword, sort, status } = query;
     const skip = (page - 1) * take;
+    const isbn = query.isbn ? normalizeIsbn(query.isbn) : null;
+    if (query.isbn && !isbn)
+      throw new BadRequestException('올바른 ISBN이 아닙니다.');
 
     const applyKeyword = (qb) => {
+      if (isbn) qb.andWhere('book.isbn = :isbn', { isbn });
       if (status) {
         qb.andWhere('book.status = :status', { status });
       }
@@ -208,6 +214,17 @@ export class BookService {
       where: { id: userId },
     });
 
+    const isbn = createBookDto.isbn?.trim()
+      ? normalizeIsbn(createBookDto.isbn)
+      : null;
+    if (createBookDto.isbn?.trim() && !isbn)
+      throw new BadRequestException('올바른 ISBN이 아닙니다.');
+    if (isbn) {
+      const existing = await this.bookRepository.findOne({
+        where: { user: { id: userId }, isbn },
+      });
+      if (existing) return this.mapBookResponse(existing);
+    }
     let backgroundImage: string | null = null;
     if (!user) {
       throw new NotFoundException('해당 유저가 없습니다');
@@ -225,6 +242,7 @@ export class BookService {
     }
 
     const book = this.bookRepository.create({
+      isbn,
       title: createBookDto.title,
       author: createBookDto.author,
       publisher: createBookDto.publisher,
@@ -247,8 +265,22 @@ export class BookService {
       user,
     });
 
-    const savedBook = await this.bookRepository.save(book);
-    return this.mapBookResponse(savedBook);
+    try {
+      const savedBook = await this.bookRepository.save(book);
+      return this.mapBookResponse(savedBook);
+    } catch (error) {
+      if (
+        isbn &&
+        error?.driverError?.code === '23505' &&
+        error.driverError.constraint === 'UQ_book_user_isbn'
+      ) {
+        const existing = await this.bookRepository.findOneOrFail({
+          where: { user: { id: userId }, isbn },
+        });
+        return this.mapBookResponse(existing);
+      }
+      throw error;
+    }
   }
 
   async updateBook(

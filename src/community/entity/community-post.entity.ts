@@ -24,6 +24,7 @@ export type CommunityPostSnapshotNode = {
     title: string;
     author: string;
     publisher: string;
+    isbn?: string | null;
     backgroundImage: string | null;
   } | null;
   card: {

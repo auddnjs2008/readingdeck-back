@@ -159,6 +159,7 @@ export class CommunityService {
               title: relatedBook.title,
               author: relatedBook.author,
               publisher: relatedBook.publisher,
+              isbn: relatedBook.isbn ?? null,
               backgroundImage: this.s3Service.resolvePublicUrl(
                 relatedBook.backgroundImage,
               ),

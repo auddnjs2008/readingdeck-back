@@ -14,6 +14,8 @@ import {
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
+import { Public } from '../auth/decorator/public.decorator';
+import { BookInformationService } from './book-information.service';
 import { BookService } from './book.service';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { CreateBookDto } from './dto/create-book.dto';
@@ -29,6 +31,7 @@ export class BookController {
   constructor(
     private readonly bookService: BookService,
     private readonly cardService: CardService,
+    private readonly information: BookInformationService,
   ) {}
 
   @Get()
@@ -40,6 +43,12 @@ export class BookController {
   @Get('search')
   searchBooks(@Query() query: SearchBookQueryDto) {
     return this.bookService.searchBooks(query);
+  }
+
+  @Public()
+  @Get('info/:isbn')
+  getInformation(@Param('isbn') isbn: string) {
+    return this.information.get(isbn);
   }
 
   @Get(':bookId')

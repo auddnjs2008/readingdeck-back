@@ -1,3 +1,4 @@
+import { BookInformationService } from './book-information.service';
 import { Module } from '@nestjs/common';
 import { BookService } from './book.service';
 import { BookController } from './book.controller';
@@ -14,7 +15,7 @@ import { CardModule } from 'src/card/card.module';
     KakaoModule,
     CardModule,
   ],
-  providers: [BookService],
+  providers: [BookService, BookInformationService],
   controllers: [BookController],
 })
 export class BookModule {}

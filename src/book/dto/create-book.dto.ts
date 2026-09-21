@@ -5,12 +5,18 @@ import {
   IsInt,
   IsOptional,
   IsString,
+  MaxLength,
   Max,
   Min,
 } from 'class-validator';
 import { BookStatus } from '../entity/book.entity';
 
 export class CreateBookDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  isbn?: string;
+
   @IsString()
   title: string;
 

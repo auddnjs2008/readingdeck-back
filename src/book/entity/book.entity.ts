@@ -4,6 +4,7 @@ import { DeckNode } from 'src/deck-node/entity/deck-node.entity';
 import { User } from 'src/user/entity/user.entity';
 import {
   Column,
+  Index,
   Entity,
   ManyToOne,
   OneToMany,
@@ -17,12 +18,19 @@ export enum BookStatus {
 }
 
 @Entity()
+@Index('UQ_book_user_isbn', ['user', 'isbn'], {
+  unique: true,
+  where: '"isbn" IS NOT NULL',
+})
 export class Book extends BaseTable {
   @PrimaryGeneratedColumn()
   id: number;
 
   @Column()
   title: string;
+
+  @Column({ type: 'varchar', length: 13, nullable: true })
+  isbn: string | null;
 
   @Column()
   author: string;

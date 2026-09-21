@@ -18,6 +18,7 @@ export class KakaoBookService {
     const { query: keyword, page = 1, size = 10, sort, target } = query;
 
     const response = this.http.get(apiUrl, {
+      timeout: 8000,
       headers: {
         Authorization: `KakaoAK ${apiKey}`,
       },

@@ -1,5 +1,12 @@
 import { Type } from 'class-transformer';
-import { IsEnum, IsInt, IsOptional, IsString, Min } from 'class-validator';
+import {
+  IsEnum,
+  IsInt,
+  IsOptional,
+  IsString,
+  MaxLength,
+  Min,
+} from 'class-validator';
 import { BookStatus } from '../entity/book.entity';
 
 export enum BookSortType {
@@ -10,6 +17,11 @@ export enum BookSortType {
 }
 
 export class GetBookQueryDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  isbn?: string;
+
   @IsOptional()
   @Type(() => Number)
   @IsInt()
