@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  HttpCode,
   Post,
   Req,
   Res,
@@ -62,6 +63,14 @@ export class AuthController {
         ? await this.authService.loginWithKakaoForMcp(user)
         : await this.authService.loginWithKakao(user, res);
     return res.redirect(redirectUrl);
+  }
+
+  @Post('/logout')
+  @Public()
+  @HttpCode(200)
+  logout(@Res({ passthrough: true }) res: Response) {
+    this.authService.clearCookies(res);
+    return { ok: true };
   }
 
   @Post('/refresh')
